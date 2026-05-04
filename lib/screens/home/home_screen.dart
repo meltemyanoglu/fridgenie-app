@@ -153,13 +153,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   runSpacing: 8,
                   children: visibleIngredients.map((ing) {
                     final selected = fridge.isSelected(ing.id);
-                    return IngredientChip(
-                      ingredient: ing,
-                      selected: selected,
-                      onTap: () {
-                        fridge.toggleSelected(ing.id);
-                        _regenerate();
-                      },
+
+                    return AnimatedScale(
+                      scale: selected ? 1.04 : 1.0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutBack,
+                      child: IngredientChip(
+                        ingredient: ing,
+                        selected: selected,
+                        compact: true,
+                        onTap: () {
+                          fridge.toggleSelected(ing.id);
+                          _regenerate();
+                        },
+                      ),
                     );
                   }).toList(),
                 ),
@@ -189,11 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                PrimaryButton(
-                  label: 'Generate meal ideas',
-                  icon: Icons.auto_awesome_rounded,
+                _AnimatedGenerateButton(
                   loading: recipes.suggestionsState == RequestState.loading,
-                  onPressed: fridge.selectedIds.isEmpty ? null : _regenerate,
+                  disabled: fridge.selectedIds.isEmpty,
+                  onPressed: _regenerate,
                 ),
 
                 const SizedBox(height: AppSpacing.lg),
@@ -488,10 +494,7 @@ class _ChefHeader extends StatelessWidget {
               gradient: AppColors.heroGradient,
               borderRadius: BorderRadius.circular(28),
             ),
-            child: const Text(
-              '👩‍🍳',
-              style: TextStyle(fontSize: 40),
-            ),
+            child: const _AnimatedChefEmoji(),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -688,6 +691,119 @@ class _MiniAction extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AnimatedGenerateButton extends StatefulWidget {
+  final bool loading;
+  final bool disabled;
+  final VoidCallback onPressed;
+
+  const _AnimatedGenerateButton({
+    required this.loading,
+    required this.disabled,
+    required this.onPressed,
+  });
+
+  @override
+  State<_AnimatedGenerateButton> createState() =>
+      _AnimatedGenerateButtonState();
+}
+
+class _AnimatedGenerateButtonState extends State<_AnimatedGenerateButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+
+    _scale = Tween<double>(begin: 1.0, end: 1.025).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shouldAnimate = !widget.disabled && !widget.loading;
+
+    return AnimatedBuilder(
+      animation: _scale,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: shouldAnimate ? _scale.value : 1.0,
+          child: child,
+        );
+      },
+      child: PrimaryButton(
+        label: widget.loading ? 'Creating ideas...' : 'Generate meal ideas',
+        icon: Icons.auto_awesome_rounded,
+        loading: widget.loading,
+        onPressed: widget.disabled ? null : widget.onPressed,
+      ),
+    );
+  }
+}
+
+class _AnimatedChefEmoji extends StatefulWidget {
+  const _AnimatedChefEmoji();
+
+  @override
+  State<_AnimatedChefEmoji> createState() => _AnimatedChefEmojiState();
+}
+
+class _AnimatedChefEmojiState extends State<_AnimatedChefEmoji>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _float;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    )..repeat(reverse: true);
+
+    _float = Tween<double>(begin: -2, end: 2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _float,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _float.value),
+          child: child,
+        );
+      },
+      child: const Text(
+        '👩‍🍳',
+        style: TextStyle(fontSize: 40),
       ),
     );
   }
