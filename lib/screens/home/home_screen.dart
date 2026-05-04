@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await recipes.generateSuggestions(fridge.selectedIds);
   }
 
-  String _greeting() {
+  String _greeting() { // Returns a time-appropriate greeting based on the current hour.yess
     final h = DateTime.now().hour;
     if (h < 5) return 'Late-night cravings';
     if (h < 12) return 'Good morning';
