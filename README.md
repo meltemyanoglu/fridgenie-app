@@ -1,67 +1,34 @@
 # 🍳 Fridgenie
 
-**Fridgenie** is a modern Flutter application that helps users generate meal ideas from the ingredients they already have.  
-It focuses on reducing food waste, simplifying decision-making, and making cooking more fun through smart UI/UX and AI-assisted suggestions.
+Fridgenie is a Flutter app that helps you decide what to cook using the ingredients you already have.
+
+Instead of thinking “what should I cook?”, you just pick what’s in your fridge and the app suggests meals for you.
 
 ---
 
-## 📸 Preview
+## What you can do
 
-<p align="center">
-  <img src="assets/screenshots/home.png" width="250"/>
-  <img src="assets/screenshots/ingredients.png" width="250"/>
-  <img src="assets/screenshots/modes.png" width="250"/>
-</p>
-
-
-## ✨ Features
-
-### 🧊 Ingredient-Based Cooking
-- Select ingredients from your fridge  
-- Toggle items easily with interactive chips  
-- Generate meal ideas instantly  
-
-### 🤖 AI-Powered Suggestions
-- Smart recipe recommendations based on selected ingredients  
-- Categorized results (cozy, healthy, quick, etc.)  
-- Dynamic regeneration of suggestions  
-
-### 🎯 Genie Modes
-Different cooking experiences:
-- 🎲 **Surprise Me** – random curated meals  
-- 🏆 **3-Ingredient Challenge** – constraint-based creativity  
-- ♻️ **Leftover Rescue** – reduce food waste  
-- 🌈 **Cook for My Mood** – emotion-based cooking  
-- 💚 **Swipe Discovery** – Tinder-style exploration  
-
-### 📊 User Progress & Gamification
-- 🔥 Daily streak tracking  
-- 🍽️ Recipes cooked counter  
-- ♻️ Waste saved tracking  
-- 🏅 Badge system  
-
-### 🎨 Modern UI/UX
-- Smooth animations  
-- Floating bottom navigation (auto-hide on scroll)  
-- Responsive layout  
-- Clean, minimal, playful design  
+-  Select ingredients from your fridge  
+-  Get instant meal suggestions  
+-  Try different cooking modes (challenge, surprise, mood-based)  
+-  Track your cooking streak  
+-  See how many meals you’ve created  
 
 ---
 
-## 🏗️ Project Structure
-lib/
-├── core/
-├── data/
-├── providers/
-├── screens/
-├── widgets/
-└── routes.dart
+## Main Features
+
+- **Ingredient selection** → tap to add/remove  
+- **Meal generation** → AI-style suggestions  
+- **Genie modes** → fun ways to explore recipes  
+- **Progress tracking** → streak, stats, badges  
+- **Clean UI** → simple and modern design  
 
 ---
 
-## 🚀 Getting Started
+##  How to run
 
-### 1. Clone the repository
+1. Clone the project
 
 ```bash
 git clone https://github.com/your-username/fridgenie-app.git
