@@ -16,6 +16,7 @@ import '../../widgets/animated_blob.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/ingredient_chip.dart';
+import '../../widgets/interactive_basket.dart';
 import '../../widgets/mode_card.dart';
 import '../../widgets/pill_tab_bar.dart';
 import '../../widgets/primary_button.dart';
@@ -34,7 +35,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _ai = AIService();
-
   bool _showAllIngredients = false;
 
   @override
@@ -115,6 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTapStreak: () =>
                       Navigator.of(context).pushNamed(AppRoutes.badges),
                 ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                const InteractiveBasket(),
 
                 const SizedBox(height: AppSpacing.lg),
 
