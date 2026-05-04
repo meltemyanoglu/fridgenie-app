@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 
-/// Animated circular streak indicator. Days are highlighted around the ring;
-/// center shows the streak count. Uses a CustomPainter for the ring.
 class StreakRing extends StatelessWidget {
   final int days;
   final int target;
@@ -15,12 +13,13 @@ class StreakRing extends StatelessWidget {
     super.key,
     required this.days,
     this.target = 7,
-    this.size = 140,
+    this.size = 120,
   });
 
   @override
   Widget build(BuildContext context) {
-    final progress = (days / target).clamp(0.0, 1.0);
+    final safeTarget = target <= 0 ? 1 : target;
+    final progress = (days / safeTarget).clamp(0.0, 1.0);
 
     return SizedBox(
       width: size,
@@ -32,31 +31,42 @@ class StreakRing extends StatelessWidget {
             size: Size.square(size),
             painter: _RingPainter(progress: progress),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🔥', style: TextStyle(fontSize: 30)),
-              const SizedBox(height: 2),
-              Text(
-                '$days',
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  height: 1,
+          Container(
+            width: size * 0.66,
+            height: size * 0.66,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.65),
+              shape: BoxShape.circle,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  '🔥',
+                  style: TextStyle(fontSize: 18),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'day streak',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
+                Text(
+                  '$days',
+                  style: TextStyle(
+                    fontSize: size * 0.23,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                    height: 0.95,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  'days',
+                  style: TextStyle(
+                    fontSize: size * 0.085,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -66,16 +76,17 @@ class StreakRing extends StatelessWidget {
 
 class _RingPainter extends CustomPainter {
   final double progress;
+
   _RingPainter({required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final radius = size.width / 2 - 8;
-    final stroke = 12.0;
+    final stroke = size.width * 0.09;
+    final radius = size.width / 2 - stroke;
 
     final track = Paint()
-      ..color = AppColors.primarySurface
+      ..color = Colors.white.withValues(alpha: 0.72)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = stroke;
@@ -92,6 +103,7 @@ class _RingPainter extends CustomPainter {
 
     final start = -math.pi / 2;
     final sweep = 2 * math.pi * progress;
+
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       start,
@@ -102,6 +114,7 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RingPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _RingPainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
 }

@@ -35,11 +35,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _ai = AIService();
 
+  bool _showAllIngredients = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Seed selection from inventory + auto-generate suggestions on first build.
       final fridge = context.read<FridgeProvider>();
       if (fridge.selectedIds.isEmpty && fridge.inventoryIds.isNotEmpty) {
         fridge.addManyToSelection(fridge.inventoryIds.take(5));
@@ -54,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await recipes.generateSuggestions(fridge.selectedIds);
   }
 
-  String _greeting() { // Returns a time-appropriate greeting based on the current hour.yess
+  String _greeting() {
     final h = DateTime.now().hour;
     if (h < 5) return 'Late-night cravings';
     if (h < 12) return 'Good morning';
@@ -69,13 +70,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final recipes = context.watch<RecipeProvider>();
     final user = context.watch<UserProvider>();
     final tip = _ai.tipOfTheDay();
+
+    final visibleIngredients = _showAllIngredients
+        ? MockIngredients.common
+        : MockIngredients.common.take(9).toList();
+
     final categoryTabs = RecipeCategory.values
-        .map((c) => PillTab<RecipeCategory>(
-              value: c,
-              label: c.label,
-              emoji: c.emoji,
-              color: c.color,
-            ))
+        .map(
+          (c) => PillTab<RecipeCategory>(
+            value: c,
+            label: c.label,
+            emoji: c.emoji,
+            color: c.color,
+          ),
+        )
         .toList();
 
     return Stack(
@@ -84,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
           top: -120,
           right: -80,
           child: const AnimatedBlob(
-            size: 280,
+            size: 260,
             colors: [AppColors.primarySurface, AppColors.background],
           ),
         ),
@@ -95,78 +103,36 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.pageHPadding,
-                AppSpacing.lg,
+                AppSpacing.md,
                 AppSpacing.pageHPadding,
-                AppSpacing.huge,
+                130,
               ),
               children: [
-                // ── Top bar (greeting + streak) ─────────────────────────
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _greeting(),
-                            style: context.text.bodyMedium,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${user.profile.name} 👋',
-                            style: context.text.headlineLarge,
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context)
-                          .pushNamed(AppRoutes.badges),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusPill),
-                          border: Border.all(color: AppColors.outline),
-                        ),
-                        child: Row(
-                          children: [
-                            const Text('🔥',
-                                style: TextStyle(fontSize: 16)),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${user.profile.currentStreak} days',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                _ChefHeader(
+                  greeting: _greeting(),
+                  name: user.profile.name,
+                  streak: user.profile.currentStreak,
+                  onTapStreak: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.badges),
                 ),
-                const SizedBox(height: AppSpacing.xxl),
 
-                // ── Hero "What's in your fridge today?" ──────────────────
+                const SizedBox(height: AppSpacing.lg),
+
                 _HeroCard(
                   selectedCount: fridge.selectedIds.length,
                   onTapPantry: widget.onOpenPantry,
                 ),
-                const SizedBox(height: AppSpacing.xl),
 
-                // ── Quick-pick ingredient chips ──────────────────────────
+                const SizedBox(height: AppSpacing.lg),
+
                 Row(
                   children: [
                     Expanded(
                       child: SectionHeader(
                         title: 'Tonight\'s ingredients',
-                        subtitle: '${fridge.selectedIds.length} selected · tap to toggle',
+                        subtitle: fridge.selectedIds.isEmpty
+                            ? 'Pick what you have at home'
+                            : '${fridge.selectedIds.length} selected · tap to edit',
                       ),
                     ),
                     if (fridge.selectedIds.isNotEmpty)
@@ -179,11 +145,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                   ],
                 ),
+
                 const SizedBox(height: AppSpacing.sm),
+
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: MockIngredients.common.map((ing) {
+                  children: visibleIngredients.map((ing) {
                     final selected = fridge.isSelected(ing.id);
                     return IngredientChip(
                       ingredient: ing,
@@ -195,18 +163,41 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: AppSpacing.xl),
 
-                // ── Generate Meals CTA ───────────────────────────────────
+                if (MockIngredients.common.length > 9) ...[
+                  const SizedBox(height: 10),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _showAllIngredients = !_showAllIngredients;
+                        });
+                      },
+                      icon: Icon(
+                        _showAllIngredients
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                      ),
+                      label: Text(
+                        _showAllIngredients
+                            ? 'Show less'
+                            : 'Show all ingredients',
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: AppSpacing.lg),
+
                 PrimaryButton(
                   label: 'Generate meal ideas',
                   icon: Icons.auto_awesome_rounded,
                   loading: recipes.suggestionsState == RequestState.loading,
                   onPressed: fridge.selectedIds.isEmpty ? null : _regenerate,
                 ),
-                const SizedBox(height: AppSpacing.xl),
 
-                // ── Categories pill bar ──────────────────────────────────
+                const SizedBox(height: AppSpacing.lg),
+
                 PillTabBar<RecipeCategory>(
                   tabs: categoryTabs,
                   selected: recipes.activeCategory,
@@ -215,9 +206,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     _regenerate();
                   },
                 ),
+
                 const SizedBox(height: AppSpacing.lg),
 
-                // ── Suggestions ──────────────────────────────────────────
                 if (recipes.suggestionsState == RequestState.loading)
                   const _SuggestionsLoading()
                 else if (recipes.suggestions.isEmpty)
@@ -231,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 else
                   SizedBox(
-                    height: 320,
+                    height: 300,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: recipes.suggestions.length.clamp(0, 6),
@@ -239,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (_, i) {
                         final r = recipes.suggestions[i];
                         return SizedBox(
-                          width: 280,
+                          width: 270,
                           child: RecipeCard(
                             ranked: r,
                             onTap: () => Navigator.of(context).pushNamed(
@@ -252,58 +243,63 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                const SizedBox(height: AppSpacing.xxl),
+                const SizedBox(height: AppSpacing.xl),
 
-                // ── Daily Genie tip ──────────────────────────────────────
                 SectionHeader(
                   title: 'Today\'s Genie tip',
                   subtitle: 'A small habit, big payoff',
                 ),
+
                 const SizedBox(height: AppSpacing.sm),
+
                 GlassCard(
                   color: AppColors.citrusSurface,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 52,
-                        height: 52,
+                        width: 48,
+                        height: 48,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusMd),
                         ),
-                        child: Text(tip.emoji,
-                            style: const TextStyle(fontSize: 28)),
+                        child: Text(
+                          tip.emoji,
+                          style: const TextStyle(fontSize: 26),
+                        ),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(tip.title,
-                                style: context.text.titleLarge),
+                            Text(tip.title, style: context.text.titleLarge),
                             const SizedBox(height: 4),
-                            Text(tip.body,
-                                style: context.text.bodyMedium),
+                            Text(tip.body, style: context.text.bodyMedium),
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xxl),
 
-                // ── Modes (Surprise Me, Challenge, Rescue, Mood) ─────────
+                const SizedBox(height: AppSpacing.xl),
+
                 SectionHeader(
                   title: 'Genie modes',
                   subtitle: 'New ways to cook tonight',
                 ),
+
                 const SizedBox(height: AppSpacing.md),
+
                 SizedBox(
                   height: 210,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.none,
                     children: [
                       ModeCard(
                         title: 'Surprise Me',
@@ -313,8 +309,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           AppColors.citrus,
                           AppColors.citrusDeep,
                         ],
-                        onTap: () => Navigator.of(context)
-                            .pushNamed(AppRoutes.surprise),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.surprise),
                       ),
                       const SizedBox(width: 12),
                       ModeCard(
@@ -337,8 +333,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           AppColors.moodCozy,
                           AppColors.tomato,
                         ],
-                        onTap: () => Navigator.of(context)
-                            .pushNamed(AppRoutes.rescue),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.rescue),
                       ),
                       const SizedBox(width: 12),
                       ModeCard(
@@ -349,8 +345,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           AppColors.moodCelebratory,
                           AppColors.moodAdventurous,
                         ],
-                        onTap: () => Navigator.of(context)
-                            .pushNamed(AppRoutes.mood),
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.mood),
                       ),
                       const SizedBox(width: 12),
                       ModeCard(
@@ -368,9 +364,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                const SizedBox(height: AppSpacing.xxl),
+                const SizedBox(height: AppSpacing.xl),
 
-                // ── Streak / stats card ──────────────────────────────────
                 GlassCard(
                   color: AppColors.primarySurface,
                   child: Row(
@@ -378,18 +373,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       StreakRing(
                         days: user.profile.currentStreak,
                         target: 7,
-                        size: 130,
+                        size: 118,
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('You\'re on a roll',
-                                style: AppTypography.wordmark.copyWith(
-                                  fontSize: 22,
-                                  color: AppColors.primaryDark,
-                                )),
+                            Text(
+                              'You\'re on a roll',
+                              style: AppTypography.wordmark.copyWith(
+                                fontSize: 21,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               '${user.profile.recipesCooked} recipes cooked · '
@@ -403,34 +400,39 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: user.badges
                                   .where((b) => b.earned)
                                   .take(4)
-                                  .map((b) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
+                                  .map(
+                                    (b) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(
+                                          AppSpacing.radiusPill,
                                         ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                              AppSpacing.radiusPill),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(b.emoji,
-                                                style: const TextStyle(
-                                                    fontSize: 13)),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              b.name,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w800,
-                                                color: AppColors.primaryDark,
-                                              ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            b.emoji,
+                                            style:
+                                                const TextStyle(fontSize: 13),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            b.name,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.primaryDark,
                                             ),
-                                          ],
-                                        ),
-                                      ))
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
                                   .toList(),
                             ),
                           ],
@@ -448,23 +450,138 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HeroCard extends StatelessWidget {
-  final int selectedCount;
-  final VoidCallback? onTapPantry;
-  const _HeroCard({required this.selectedCount, this.onTapPantry});
+class _ChefHeader extends StatelessWidget {
+  final String greeting;
+  final String name;
+  final int streak;
+  final VoidCallback onTapStreak;
+
+  const _ChefHeader({
+    required this.greeting,
+    required this.name,
+    required this.streak,
+    required this.onTapStreak,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.045),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 74,
+            height: 74,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: AppColors.heroGradient,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: const Text(
+              '👩‍🍳',
+              style: TextStyle(fontSize: 40),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greeting,
+                  style: context.text.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$name 👋',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.wordmark.copyWith(
+                    fontSize: 34,
+                    color: AppColors.textPrimary,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Ready to cook something clever?',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onTapStreak,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primarySurface,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                border: Border.all(color: AppColors.outline),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🔥', style: TextStyle(fontSize: 15)),
+                  const SizedBox(width: 5),
+                  Text(
+                    '$streak',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  final int selectedCount;
+  final VoidCallback? onTapPantry;
+
+  const _HeroCard({
+    required this.selectedCount,
+    this.onTapPantry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: AppColors.heroGradient,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.10),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: AppColors.primary.withValues(alpha: 0.09),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -474,45 +591,53 @@ class _HeroCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 42,
+                height: 42,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
-                child: const Text('🧊', style: TextStyle(fontSize: 22)),
+                child: const Text('🧊', style: TextStyle(fontSize: 21)),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'What\'s in your fridge today?',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        height: 1.08,
+                      ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             selectedCount == 0
                 ? 'Tap a few ingredients below — I\'ll dream up dinners that match.'
                 : 'I see $selectedCount ingredients — pulling matches now.',
-            style: Theme.of(context).textTheme.bodyLarge,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  height: 1.35,
+                ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
-              _MiniAction(
-                icon: Icons.kitchen_rounded,
-                label: 'Open pantry',
-                onTap: onTapPantry,
+              Flexible(
+                child: _MiniAction(
+                  icon: Icons.kitchen_rounded,
+                  label: 'Open pantry',
+                  onTap: onTapPantry,
+                ),
               ),
               const SizedBox(width: 10),
-              _MiniAction(
-                icon: Icons.center_focus_strong_rounded,
-                label: 'Scan fridge',
-                onTap: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.scan),
+              Flexible(
+                child: _MiniAction(
+                  icon: Icons.center_focus_strong_rounded,
+                  label: 'Scan fridge',
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.scan),
+                ),
               ),
             ],
           ),
@@ -526,29 +651,39 @@ class _MiniAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
-  const _MiniAction({required this.icon, required this.label, this.onTap});
+
+  const _MiniAction({
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: AppColors.primaryDark),
+            Icon(icon, size: 17, color: AppColors.primaryDark),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-                color: AppColors.primaryDark,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  color: AppColors.primaryDark,
+                ),
               ),
             ),
           ],
@@ -560,16 +695,17 @@ class _MiniAction extends StatelessWidget {
 
 class _SuggestionsLoading extends StatelessWidget {
   const _SuggestionsLoading();
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 220,
+      height: 210,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: 3,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (_, __) => Container(
-          width: 240,
+          width: 230,
           decoration: BoxDecoration(
             color: AppColors.surfaceMuted,
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
