@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models/badge.dart';
 import '../data/models/enums.dart';
@@ -10,6 +11,77 @@ class UserProvider extends ChangeNotifier {
 
   UserProfile get profile => _profile;
   bool get onboardingDone => _onboardingDone;
+
+  // ── Persistence keys ────────────────────────────────────────────────────
+  static const _kOnboardingDone = 'fridgenie.onboarding_done';
+  static const _kName = 'fridgenie.name';
+  static const _kDietary = 'fridgenie.dietary';
+  static const _kSkill = 'fridgenie.skill';
+  static const _kCuisines = 'fridgenie.cuisines';
+  static const _kMood = 'fridgenie.mood';
+
+  /// Hydrate state from SharedPreferences. Call once at app start.
+  Future<void> hydrate() async {
+    final p = await SharedPreferences.getInstance();
+    _onboardingDone = p.getBool(_kOnboardingDone) ?? false;
+    final name = p.getString(_kName) ?? _profile.name;
+    final dietaryNames = p.getStringList(_kDietary);
+    final skillName = p.getString(_kSkill);
+    final cuisineNames = p.getStringList(_kCuisines);
+    final moodName = p.getString(_kMood);
+
+    final dietary = dietaryNames == null
+        ? _profile.dietary
+        : dietaryNames
+            .map((n) => DietaryPreference.values
+                .firstWhere((e) => e.name == n, orElse: () => DietaryPreference.noRestrictions))
+            .toSet();
+
+    final skill = skillName == null
+        ? _profile.skill
+        : CookingSkill.values.firstWhere(
+            (e) => e.name == skillName,
+            orElse: () => CookingSkill.comfortable,
+          );
+
+    final cuisines = cuisineNames == null
+        ? _profile.favoriteCuisines
+        : cuisineNames
+            .map((n) => CuisineType.values
+                .firstWhere((e) => e.name == n, orElse: () => CuisineType.italian))
+            .toSet();
+
+    final mood = moodName == null
+        ? _profile.defaultMood
+        : Mood.values.firstWhere(
+            (e) => e.name == moodName,
+            orElse: () => Mood.cozy,
+          );
+
+    _profile = _profile.copyWith(
+      name: name,
+      dietary: dietary,
+      skill: skill,
+      favoriteCuisines: cuisines,
+      defaultMood: mood,
+    );
+    notifyListeners();
+  }
+
+  Future<void> _persistProfile() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kName, _profile.name);
+    await p.setStringList(
+      _kDietary,
+      _profile.dietary.map((e) => e.name).toList(),
+    );
+    await p.setString(_kSkill, _profile.skill.name);
+    await p.setStringList(
+      _kCuisines,
+      _profile.favoriteCuisines.map((e) => e.name).toList(),
+    );
+    await p.setString(_kMood, _profile.defaultMood.name);
+  }
 
   // ── Onboarding state mutators ──────────────────────────────────────────
   void setName(String name) {
@@ -37,8 +109,19 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void completeOnboarding() {
+  Future<void> completeOnboarding() async {
     _onboardingDone = true;
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kOnboardingDone, true);
+    await _persistProfile();
+    notifyListeners();
+  }
+
+  /// Wipe stored profile + onboarding flag (used by "restart onboarding").
+  Future<void> resetOnboarding() async {
+    _onboardingDone = false;
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kOnboardingDone, false);
     notifyListeners();
   }
 

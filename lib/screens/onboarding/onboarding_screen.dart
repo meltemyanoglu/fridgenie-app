@@ -55,14 +55,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     final user = context.read<UserProvider>();
     user.setName(_name.isEmpty ? 'Chef' : _name);
     user.setDietary(_dietary);
     user.setSkill(_skill);
     user.setFavoriteCuisines(_cuisines.isEmpty ? {CuisineType.italian} : _cuisines);
     user.setMood(_mood);
-    user.completeOnboarding();
+    await user.completeOnboarding();
+    if (!mounted) return;
     Navigator.of(context).pushReplacementNamed(AppRoutes.shell);
   }
 
