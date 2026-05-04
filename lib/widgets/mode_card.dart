@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 
-/// Big square gradient card used for sticky feature modes (Surprise Me,
-/// Fridge Challenge, Leftover Rescue, Mood cooking).
 class ModeCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -29,7 +27,7 @@ class ModeCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: wide ? double.infinity : 200,
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -47,18 +45,20 @@ class ModeCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
-                  child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                  child: Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 24),
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -66,14 +66,19 @@ class ModeCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.4),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.arrow_forward_rounded,
-                      size: 18, color: AppColors.textPrimary),
+                  child: const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const Spacer(),
             Text(
               title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -83,13 +88,13 @@ class ModeCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
-                height: 1.35,
+                height: 1.25,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
