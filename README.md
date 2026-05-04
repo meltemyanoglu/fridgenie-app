@@ -13,9 +13,6 @@ It focuses on reducing food waste, simplifying decision-making, and making cooki
   <img src="assets/screenshots/modes.png" width="250"/>
 </p>
 
-> 📌 Replace these images with your own screenshots.
-
----
 
 ## ✨ Features
 
