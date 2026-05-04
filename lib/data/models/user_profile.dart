@@ -34,15 +34,16 @@ class TasteProfile {
     double? fresh,
     double? comforting,
     double? adventurous,
-  }) =>
-      TasteProfile(
-        sweet: sweet ?? this.sweet,
-        savory: savory ?? this.savory,
-        spicy: spicy ?? this.spicy,
-        fresh: fresh ?? this.fresh,
-        comforting: comforting ?? this.comforting,
-        adventurous: adventurous ?? this.adventurous,
-      );
+  }) {
+    return TasteProfile(
+      sweet: sweet ?? this.sweet,
+      savory: savory ?? this.savory,
+      spicy: spicy ?? this.spicy,
+      fresh: fresh ?? this.fresh,
+      comforting: comforting ?? this.comforting,
+      adventurous: adventurous ?? this.adventurous,
+    );
+  }
 }
 
 class UserProfile {
@@ -52,6 +53,8 @@ class UserProfile {
   final Set<CuisineType> favoriteCuisines;
   final Mood defaultMood;
   final TasteProfile taste;
+
+  /// These values should be updated by UserProvider when the user cooks/saves meals.
   final int currentStreak;
   final int longestStreak;
   final int recipesCooked;
@@ -67,10 +70,12 @@ class UserProfile {
     },
     this.defaultMood = Mood.cozy,
     this.taste = const TasteProfile(),
-    this.currentStreak = 4,
-    this.longestStreak = 12,
-    this.recipesCooked = 23,
-    this.wasteSavedGrams = 1840,
+
+    // Start from real user progress instead of fake demo numbers.
+    this.currentStreak = 0,
+    this.longestStreak = 0,
+    this.recipesCooked = 0,
+    this.wasteSavedGrams = 0,
   });
 
   UserProfile copyWith({
@@ -84,17 +89,18 @@ class UserProfile {
     int? longestStreak,
     int? recipesCooked,
     int? wasteSavedGrams,
-  }) =>
-      UserProfile(
-        name: name ?? this.name,
-        dietary: dietary ?? this.dietary,
-        skill: skill ?? this.skill,
-        favoriteCuisines: favoriteCuisines ?? this.favoriteCuisines,
-        defaultMood: defaultMood ?? this.defaultMood,
-        taste: taste ?? this.taste,
-        currentStreak: currentStreak ?? this.currentStreak,
-        longestStreak: longestStreak ?? this.longestStreak,
-        recipesCooked: recipesCooked ?? this.recipesCooked,
-        wasteSavedGrams: wasteSavedGrams ?? this.wasteSavedGrams,
-      );
+  }) {
+    return UserProfile(
+      name: name ?? this.name,
+      dietary: dietary ?? this.dietary,
+      skill: skill ?? this.skill,
+      favoriteCuisines: favoriteCuisines ?? this.favoriteCuisines,
+      defaultMood: defaultMood ?? this.defaultMood,
+      taste: taste ?? this.taste,
+      currentStreak: currentStreak ?? this.currentStreak,
+      longestStreak: longestStreak ?? this.longestStreak,
+      recipesCooked: recipesCooked ?? this.recipesCooked,
+      wasteSavedGrams: wasteSavedGrams ?? this.wasteSavedGrams,
+    );
+  }
 }
