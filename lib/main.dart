@@ -1,121 +1,318 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const FridgenieApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class FridgenieApp extends StatelessWidget {
+  const FridgenieApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Fridgenie',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        fontFamily: 'Arial',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6ABF69),
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const HomeScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class Ingredient {
+  final String name;
+  final IconData icon;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  const Ingredient(this.name, this.icon);
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class Recipe {
+  final String title;
+  final String subtitle;
+  final String time;
+  final IconData icon;
 
-  void _incrementCounter() {
+  const Recipe({
+    required this.title,
+    required this.subtitle,
+    required this.time,
+    required this.icon,
+  });
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final List<String> selectedIngredients = [];
+
+  final ingredients = const [
+    Ingredient('Eggs', Icons.egg_alt),
+    Ingredient('Tomato', Icons.local_pizza),
+    Ingredient('Cheese', Icons.breakfast_dining),
+    Ingredient('Rice', Icons.rice_bowl),
+    Ingredient('Chicken', Icons.dinner_dining),
+    Ingredient('Spinach', Icons.eco),
+  ];
+
+  final recipes = const [
+    Recipe(
+      title: 'Cheesy Tomato Omelette',
+      subtitle: 'A quick protein-rich meal with simple ingredients.',
+      time: '15 min',
+      icon: Icons.egg_alt,
+    ),
+    Recipe(
+      title: 'Green Rice Bowl',
+      subtitle: 'A fresh bowl with rice, spinach and light seasoning.',
+      time: '20 min',
+      icon: Icons.rice_bowl,
+    ),
+    Recipe(
+      title: 'Comfort Chicken Plate',
+      subtitle: 'Easy dinner idea using fridge basics.',
+      time: '25 min',
+      icon: Icons.dinner_dining,
+    ),
+  ];
+
+  void toggleIngredient(String name) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      if (selectedIngredients.contains(name)) {
+        selectedIngredients.remove(name);
+      } else {
+        selectedIngredients.add(name);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+      backgroundColor: const Color(0xFFF8F6EF),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Fridgenie',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF20382B),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Turn ingredients into ideas.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6A756D),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2F3DF),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.kitchen,
+                      size: 38,
+                      color: Color(0xFF3F7D44),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'What’s in your fridge today?',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF20382B),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Pick a few ingredients and discover simple meal ideas.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF5F6F62),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+              const Text(
+                'Ingredients',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF20382B),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: ingredients.map((ingredient) {
+                  final isSelected =
+                      selectedIngredients.contains(ingredient.name);
+
+                  return ChoiceChip(
+                    selected: isSelected,
+                    avatar: Icon(
+                      ingredient.icon,
+                      size: 18,
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF3F7D44),
+                    ),
+                    label: Text(ingredient.name),
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF20382B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    selectedColor: const Color(0xFF3F7D44),
+                    backgroundColor: Colors.white,
+                    onSelected: (_) => toggleIngredient(ingredient.name),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: selectedIngredients.isEmpty ? null : () {},
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Generate meal ideas'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF20382B),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFFD5D3CC),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+              const Text(
+                'Suggested Recipes',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF20382B),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              ...recipes.map((recipe) => RecipeCard(recipe: recipe)),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+    );
+  }
+}
+
+class RecipeCard extends StatelessWidget {
+  final Recipe recipe;
+
+  const RecipeCard({
+    super.key,
+    required this.recipe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE7B8),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(
+              recipe.icon,
+              color: const Color(0xFF9C6B1D),
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  recipe.title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF20382B),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  recipe.subtitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF6A756D),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            recipe.time,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF3F7D44),
+            ),
+          ),
+        ],
       ),
     );
   }

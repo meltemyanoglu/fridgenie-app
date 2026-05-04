@@ -1,0 +1,13 @@
+class GenieTip {
+  final String id;
+  final String title;
+  final String body;
+  final String emoji;
+
+  const GenieTip({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.emoji,
+  });
+}
