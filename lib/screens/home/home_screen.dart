@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (h < 12) return 'Good morning';
     if (h < 17) return 'Good afternoon';
     if (h < 21) return 'Good evening';
-    return 'Tonight';
+    return 'Good night';
   }
 
   @override
