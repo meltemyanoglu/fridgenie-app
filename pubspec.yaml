@@ -21,6 +21,12 @@ dependencies:
   # Persist onboarding state + taste profile
   shared_preferences: ^2.3.2
 
+  # Real fridge photo capture (camera + library)
+  image_picker: ^1.1.2
+
+  # Talk to AI vision APIs (OpenAI / Anthropic) over HTTPS
+  http: ^1.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

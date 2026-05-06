@@ -162,41 +162,8 @@ class AIService {
       ..sort((a, b) => b.matchScore.compareTo(a.matchScore));
   }
 
-  /// Mock photo scan — pretend the camera saw a few ingredients. Prefers
-  /// items NOT already in the user's fridge so each scan feels fresh; falls
-  /// back to common items when the catalog is exhausted.
-  Future<List<Ingredient>> scanFridgePhoto({
-    Set<String> excludeIds = const {},
-  }) async {
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Wide pool of plausible detections. Order doesn't matter — we shuffle.
-    final pool = <String>[
-      'tomato', 'eggs', 'cheese', 'onion', 'garlic', 'spinach',
-      'bell_pepper', 'carrot', 'mushroom', 'avocado', 'lemon',
-      'chicken', 'salmon', 'tuna', 'tofu', 'chickpeas',
-      'milk', 'yogurt', 'butter', 'cream', 'feta',
-      'rice', 'pasta', 'bread', 'tortilla',
-      'olive_oil', 'tomato_sauce', 'beans',
-      'basil', 'parsley', 'chili', 'ginger',
-    ];
-
-    // Resolve to real ingredients, dropping any IDs that don't exist.
-    final candidates = pool
-        .map(MockIngredients.byId)
-        .whereType<Ingredient>()
-        .toList();
-
-    // Prefer fresh detections: items NOT already in fridge come first.
-    final fresh = candidates.where((i) => !excludeIds.contains(i.id)).toList()
-      ..shuffle(_rng);
-    final stale = candidates.where((i) => excludeIds.contains(i.id)).toList()
-      ..shuffle(_rng);
-
-    final ordered = [...fresh, ...stale];
-    final count = 4 + _rng.nextInt(3); // 4–6 items
-    return ordered.take(count).toList();
-  }
+  // Photo scanning has moved to `IngredientRecognizer` (mock + real OpenAI
+  // Vision implementations) — see `lib/data/services/ingredient_recognizer.dart`.
 
   /// Suggest grocery items to complete a recipe + reason.
   Future<List<GrocerySuggestion>> suggestGroceries({

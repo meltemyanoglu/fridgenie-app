@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Fridgenie needs camera access so you can snap your fridge and let AI spot what's inside.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Fridgenie needs photo library access so you can pick a fridge photo for AI ingredient detection.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Fridgenie needs permission to save snapped fridge photos.</string>
 </dict>
 </plist>

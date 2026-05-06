@@ -1,0 +1,11 @@
+name = "fridgenie-vision"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+
+# CPU time limit: vision calls take a few seconds, default 30ms is too tight.
+# Cloudflare paid plans allow up to 30s; free plan caps at 10ms CPU but the
+# wall-clock fetch happens off-thread, so this is fine on free tier too.
+
+# Set the secret with:
+#   wrangler secret put GEMINI_API_KEY
+# (do NOT paste your key here — it would be committed in plain text)

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
 import 'data/services/ai_service.dart';
+import 'data/services/ingredient_recognizer.dart';
 import 'providers/fridge_provider.dart';
 import 'providers/recipe_provider.dart';
 import 'providers/user_provider.dart';
@@ -33,6 +34,9 @@ class FridgenieApp extends StatelessWidget {
         ChangeNotifierProvider<UserProvider>.value(value: userProvider),
         ChangeNotifierProvider(create: (_) => FridgeProvider()),
         Provider<AIService>(create: (_) => AIService()),
+        Provider<IngredientRecognizer>(
+          create: (_) => createDefaultRecognizer(),
+        ),
         ChangeNotifierProxyProvider<UserProvider, RecipeProvider>(
           create: (ctx) => RecipeProvider(
             aiService: ctx.read<AIService>(),
