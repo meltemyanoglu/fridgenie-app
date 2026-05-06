@@ -17,6 +17,10 @@ abstract class IngredientRecognizer {
   /// the experience honestly ("AI Vision" vs. "Demo mode").
   bool get isReal;
 
+  /// Short, human-readable provider name shown in the scan-screen subtitle
+  /// (e.g. "Gemini Vision", "GPT-4 Vision", "Demo").
+  String get displayName;
+
   /// Detect ingredients visible in [imageBytes]. [excludeIds] lets the caller
   /// hint that the user already has those items, so the recognizer can prefer
   /// new findings (mock impl uses this; real impls may ignore it).
@@ -66,6 +70,9 @@ class MockIngredientRecognizer implements IngredientRecognizer {
 
   @override
   bool get isReal => false;
+
+  @override
+  String get displayName => 'Demo';
 
   @override
   Future<List<Ingredient>> detect({
@@ -121,6 +128,9 @@ class OpenAIVisionRecognizer implements IngredientRecognizer {
 
   @override
   bool get isReal => true;
+
+  @override
+  String get displayName => 'GPT-4 Vision';
 
   static const _systemPrompt =
       'You are an ingredient detector for a smart cooking app. Look at the '
@@ -266,6 +276,9 @@ class BackendVisionRecognizer implements IngredientRecognizer {
 
   @override
   bool get isReal => true;
+
+  @override
+  String get displayName => 'Gemini Vision';
 
   @override
   Future<List<Ingredient>> detect({

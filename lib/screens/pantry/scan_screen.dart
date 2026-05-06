@@ -279,8 +279,8 @@ class _ScanScreenState extends State<ScanScreen>
                       const SizedBox(height: 6),
                       Text(
                         recognizer.isReal
-                            ? 'Powered by GPT-4 Vision.'
-                            : 'Demo mode — set OPENAI_API_KEY to enable real AI.',
+                            ? 'Powered by ${recognizer.displayName}.'
+                            : 'Demo mode — set FRIDGENIE_BACKEND or OPENAI_API_KEY for real AI.',
                         style: context.text.bodyMedium,
                       ),
                       const SizedBox(height: AppSpacing.xl),
