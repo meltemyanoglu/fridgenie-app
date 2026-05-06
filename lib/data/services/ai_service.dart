@@ -162,14 +162,40 @@ class AIService {
       ..sort((a, b) => b.matchScore.compareTo(a.matchScore));
   }
 
-  /// Mock photo scan — pretend the camera saw a few common ingredients.
-  Future<List<Ingredient>> scanFridgePhoto() async {
+  /// Mock photo scan — pretend the camera saw a few ingredients. Prefers
+  /// items NOT already in the user's fridge so each scan feels fresh; falls
+  /// back to common items when the catalog is exhausted.
+  Future<List<Ingredient>> scanFridgePhoto({
+    Set<String> excludeIds = const {},
+  }) async {
     await Future.delayed(const Duration(seconds: 2));
-    final picks = ['tomato', 'eggs', 'cheese', 'onion', 'garlic', 'spinach'];
-    picks.shuffle(_rng);
-    return picks.take(4 + _rng.nextInt(2))
-        .map((id) => MockIngredients.byId(id)!)
+
+    // Wide pool of plausible detections. Order doesn't matter — we shuffle.
+    final pool = <String>[
+      'tomato', 'eggs', 'cheese', 'onion', 'garlic', 'spinach',
+      'bell_pepper', 'carrot', 'mushroom', 'avocado', 'lemon',
+      'chicken', 'salmon', 'tuna', 'tofu', 'chickpeas',
+      'milk', 'yogurt', 'butter', 'cream', 'feta',
+      'rice', 'pasta', 'bread', 'tortilla',
+      'olive_oil', 'tomato_sauce', 'beans',
+      'basil', 'parsley', 'chili', 'ginger',
+    ];
+
+    // Resolve to real ingredients, dropping any IDs that don't exist.
+    final candidates = pool
+        .map(MockIngredients.byId)
+        .whereType<Ingredient>()
         .toList();
+
+    // Prefer fresh detections: items NOT already in fridge come first.
+    final fresh = candidates.where((i) => !excludeIds.contains(i.id)).toList()
+      ..shuffle(_rng);
+    final stale = candidates.where((i) => excludeIds.contains(i.id)).toList()
+      ..shuffle(_rng);
+
+    final ordered = [...fresh, ...stale];
+    final count = 4 + _rng.nextInt(3); // 4–6 items
+    return ordered.take(count).toList();
   }
 
   /// Suggest grocery items to complete a recipe + reason.
