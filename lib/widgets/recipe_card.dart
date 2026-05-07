@@ -41,37 +41,56 @@ class RecipeCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero gradient with emoji
-              Container(
-                height: wide ? 130 : 110,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: r.gradientColors,
-                  ),
-                ),
+              // Hero — real photo if available, gradient + emoji otherwise.
+              SizedBox(
+                height: wide ? 150 : 130,
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
+                    if (r.photoUrl.isNotEmpty)
+                      _RecipeHeroPhoto(
+                        url: r.photoUrl,
+                        gradientColors: r.gradientColors,
+                        emoji: r.emoji,
+                      )
+                    else
+                      _RecipeHeroFallback(
+                        gradientColors: r.gradientColors,
+                        emoji: r.emoji,
+                      ),
+                    // Subtle gradient at the bottom so badges stay legible.
                     Positioned(
-                      right: -12,
-                      top: -8,
-                      child: Text(
-                        r.emoji,
-                        style: const TextStyle(fontSize: 110),
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 64,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.32),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     Positioned(
                       left: 14,
                       top: 14,
-                      child: MatchBadge(percent: ranked.matchPercent, dark: true),
+                      child: MatchBadge(
+                          percent: ranked.matchPercent, dark: true),
                     ),
                     Positioned(
                       left: 14,
                       bottom: 14,
                       child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.75),
                           borderRadius:
@@ -164,6 +183,76 @@ class RecipeCard extends StatelessWidget {
   }
 }
 
+/// Hero header that shows a network food photo. While loading we already paint
+/// the gradient + emoji underneath so the card never looks empty. If the image
+/// fails (offline, 404, etc.) we keep the fallback visible.
+class _RecipeHeroPhoto extends StatelessWidget {
+  final String url;
+  final List<Color> gradientColors;
+  final String emoji;
+
+  const _RecipeHeroPhoto({
+    required this.url,
+    required this.gradientColors,
+    required this.emoji,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Always-visible base — this is what shows during loading and on error.
+        _RecipeHeroFallback(
+          gradientColors: gradientColors,
+          emoji: emoji,
+        ),
+        Image.network(
+          url,
+          fit: BoxFit.cover,
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return const SizedBox.shrink();
+          },
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecipeHeroFallback extends StatelessWidget {
+  final List<Color> gradientColors;
+  final String emoji;
+
+  const _RecipeHeroFallback({
+    required this.gradientColors,
+    required this.emoji,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -12,
+            top: -8,
+            child: Text(emoji, style: const TextStyle(fontSize: 110)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DifficultyDots extends StatelessWidget {
   final int level;
   const _DifficultyDots({required this.level});
@@ -240,19 +329,33 @@ class RecipeListTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: r.gradientColors,
-                ),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              child: SizedBox(
+                width: 64,
+                height: 64,
+                child: r.photoUrl.isNotEmpty
+                    ? _RecipeHeroPhoto(
+                        url: r.photoUrl,
+                        gradientColors: r.gradientColors,
+                        emoji: r.emoji,
+                      )
+                    : DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: r.gradientColors,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            r.emoji,
+                            style: const TextStyle(fontSize: 32),
+                          ),
+                        ),
+                      ),
               ),
-              alignment: Alignment.center,
-              child: Text(r.emoji, style: const TextStyle(fontSize: 36)),
             ),
             const SizedBox(width: 14),
             Expanded(

@@ -41,6 +41,11 @@ class Recipe {
   final String title;
   final String tagline;
   final String emoji;
+
+  /// Optional CDN URL for a real food photo. When set, RecipeCard renders the
+  /// image as the hero; otherwise it falls back to the emoji + gradient look.
+  final String photoUrl;
+
   final List<Color> gradientColors;
   final RecipeCategory category;
   final DifficultyLevel difficulty;
@@ -62,6 +67,7 @@ class Recipe {
     required this.title,
     required this.tagline,
     required this.emoji,
+    this.photoUrl = '',
     required this.gradientColors,
     required this.category,
     required this.difficulty,

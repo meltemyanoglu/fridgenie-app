@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'data/services/ai_service.dart';
 import 'data/services/ingredient_recognizer.dart';
+import 'data/services/recipe_generator.dart';
 import 'providers/fridge_provider.dart';
 import 'providers/recipe_provider.dart';
 import 'providers/user_provider.dart';
@@ -36,6 +37,15 @@ class FridgenieApp extends StatelessWidget {
         Provider<AIService>(create: (_) => AIService()),
         Provider<IngredientRecognizer>(
           create: (_) => createDefaultRecognizer(),
+        ),
+        Provider<RecipeGenerator?>(
+          // Only available when a backend URL is configured. If null, the UI
+          // hides the "Generate me a new recipe" button.
+          create: (_) {
+            final backend = resolveBackendUrl();
+            if (backend.isEmpty) return null;
+            return RecipeGenerator(backendUrl: backend);
+          },
         ),
         ChangeNotifierProxyProvider<UserProvider, RecipeProvider>(
           create: (ctx) => RecipeProvider(

@@ -35,6 +35,14 @@ abstract class IngredientRecognizer {
 /// needing a `--dart-define`. Leave empty to require the build flag.
 const _kBackendUrl = '';
 
+/// Returns the configured backend URL (dart-define wins, then hardcoded).
+/// Empty string means no backend is configured.
+String resolveBackendUrl() {
+  const backendOverride =
+      String.fromEnvironment('FRIDGENIE_BACKEND', defaultValue: '');
+  return backendOverride.isNotEmpty ? backendOverride : _kBackendUrl;
+}
+
 /// Convenience: pick the right recognizer at app start.
 ///
 /// Priority:
@@ -43,10 +51,7 @@ const _kBackendUrl = '';
 ///   3. `--dart-define=OPENAI_API_KEY=sk-...`          → OpenAIVisionRecognizer
 ///   4. nothing set                                    → MockIngredientRecognizer
 IngredientRecognizer createDefaultRecognizer() {
-  const backendOverride =
-      String.fromEnvironment('FRIDGENIE_BACKEND', defaultValue: '');
-  final backendUrl =
-      backendOverride.isNotEmpty ? backendOverride : _kBackendUrl;
+  final backendUrl = resolveBackendUrl();
   if (backendUrl.isNotEmpty) {
     return BackendVisionRecognizer(endpoint: backendUrl);
   }

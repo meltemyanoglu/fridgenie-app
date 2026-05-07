@@ -23,7 +23,8 @@ class ProfileScreen extends StatelessWidget {
     final user = context.watch<UserProvider>();
     final recipeProv = context.watch<RecipeProvider>();
     final favorites = recipeProv.favorites
-        .map((id) => MockRecipes.byId(id))
+        .map((id) =>
+            recipeProv.generatedById(id) ?? MockRecipes.byId(id))
         .toList();
 
     return SafeArea(

@@ -8,6 +8,8 @@ import '../../core/utils/extensions.dart';
 import '../../data/mock/mock_ingredients.dart';
 import '../../data/models/enums.dart';
 import '../../data/services/ai_service.dart';
+import '../../data/services/ingredient_recognizer.dart' show RecognizerException;
+import '../../data/services/recipe_generator.dart';
 import '../../providers/fridge_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/user_provider.dart';
@@ -53,6 +55,79 @@ class _HomeScreenState extends State<HomeScreen> {
     final fridge = context.read<FridgeProvider>();
     final recipes = context.read<RecipeProvider>();
     await recipes.generateSuggestions(fridge.selectedIds);
+  }
+
+  Future<void> _generateNewRecipe() async {
+    final fridge = context.read<FridgeProvider>();
+    final recipes = context.read<RecipeProvider>();
+    final user = context.read<UserProvider>();
+    final generator = context.read<RecipeGenerator?>();
+
+    if (generator == null) return;
+    if (fridge.selectedIds.isEmpty) return;
+
+    // Show a non-dismissible loading sheet while Gemini cooks the recipe up.
+    showModalBottomSheet<void>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _GeneratingSheet(),
+    );
+
+    try {
+      final recipe = await generator.generate(
+        ingredients: fridge.selectedIds.toList(),
+        dietary: user.profile.dietary,
+        mood: user.profile.defaultMood,
+        cuisine: user.profile.favoriteCuisines.isNotEmpty
+            ? user.profile.favoriteCuisines.first
+            : null,
+        skill: user.profile.skill,
+        avoidTitles: recipes.generatedRecipes
+            .map((r) => r.title)
+            .take(10)
+            .toList(),
+      );
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // close loading sheet
+
+      recipes.addGeneratedRecipe(recipe);
+
+      // Wrap into a RankedRecipe (100% match — it was made for you).
+      final ranked = RankedRecipe(
+        recipe: recipe,
+        matchScore: 1.0,
+        haveIngredients: recipe.requiredIngredientIds,
+        missingIngredients: const [],
+        aiReason: recipe.whyRecommended,
+      );
+
+      Navigator.of(context).pushNamed(
+        AppRoutes.recipeDetail,
+        arguments: ranked,
+      );
+    } on RecognizerException catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      _showError(e.message);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      _showError('Couldn\'t cook one up: $e');
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.tomato,
+        behavior: SnackBarBehavior.floating,
+        content: Text(message,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
+    );
   }
 
   String _greeting() {
@@ -205,6 +280,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   disabled: fridge.selectedIds.isEmpty,
                   onPressed: _regenerate,
                 ),
+
+                if (context.read<RecipeGenerator?>() != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _CookSomethingNewCard(
+                    disabled: fridge.selectedIds.isEmpty,
+                    onTap: _generateNewRecipe,
+                  ),
+                ],
 
                 const SizedBox(height: AppSpacing.lg),
 
@@ -833,6 +916,190 @@ class _SuggestionsLoading extends StatelessWidget {
           alignment: Alignment.center,
           child: const CircularProgressIndicator(color: AppColors.primary),
         ),
+      ),
+    );
+  }
+}
+
+/// Sub-CTA shown right under the main "Generate meal ideas" button. Asks
+/// Gemini to invent something new from the user's fridge instead of matching
+/// a fixed catalog.
+class _CookSomethingNewCard extends StatelessWidget {
+  final bool disabled;
+  final VoidCallback onTap;
+
+  const _CookSomethingNewCard({
+    required this.disabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: disabled ? 0.5 : 1.0,
+      child: GestureDetector(
+        onTap: disabled ? null : onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: AppColors.sunsetGradient,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.citrusDeep.withValues(alpha: 0.25),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text('🧞', style: TextStyle(fontSize: 22)),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cook something new',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Let Genie invent a recipe from what you have',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.auto_awesome_rounded,
+                  color: Colors.white, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom-sheet shown while Gemini is generating. Plays a small spinner +
+/// rotating "thinking" copy to make a 5-15 sec wait feel intentional.
+class _GeneratingSheet extends StatefulWidget {
+  const _GeneratingSheet();
+
+  @override
+  State<_GeneratingSheet> createState() => _GeneratingSheetState();
+}
+
+class _GeneratingSheetState extends State<_GeneratingSheet> {
+  static const _lines = [
+    'Looking at what you have…',
+    'Thinking about flavors…',
+    'Picking a method…',
+    'Writing the steps…',
+    'Plating it up…',
+  ];
+  int _idx = 0;
+  late final Stream<int> _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Stream<int>.periodic(
+        const Duration(milliseconds: 1600), (i) => i + 1);
+    _ticker.listen((i) {
+      if (!mounted) return;
+      setState(() => _idx = i % _lines.length);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 32),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.radiusXl),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 22),
+            decoration: BoxDecoration(
+              color: AppColors.outline,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          Container(
+            width: 76,
+            height: 76,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: AppColors.sunsetGradient,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.citrusDeep.withValues(alpha: 0.4),
+                  blurRadius: 26,
+                  offset: const Offset(0, 14),
+                ),
+              ],
+            ),
+            child: const Text('🧞', style: TextStyle(fontSize: 42)),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Genie is cooking…',
+            style: AppTypography.wordmark.copyWith(
+              fontSize: 22,
+              color: AppColors.primaryDark,
+            ),
+          ),
+          const SizedBox(height: 6),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            child: Text(
+              _lines[_idx],
+              key: ValueKey(_idx),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.4,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
       ),
     );
   }

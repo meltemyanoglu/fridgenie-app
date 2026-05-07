@@ -113,6 +113,27 @@ class RecipeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Generated recipes (AI) ─────────────────────────────────────────────
+  // Recipes invented by Gemini and held in memory for this session. When the
+  // user taps "Save", we just add the id to favorites — the recipe object is
+  // already kept here so lookups by id keep working.
+  final List<Recipe> _generatedRecipes = [];
+  List<Recipe> get generatedRecipes =>
+      List.unmodifiable(_generatedRecipes);
+
+  Recipe? generatedById(String id) {
+    for (final r in _generatedRecipes) {
+      if (r.id == id) return r;
+    }
+    return null;
+  }
+
+  void addGeneratedRecipe(Recipe recipe) {
+    // Most-recent-first.
+    _generatedRecipes.insert(0, recipe);
+    notifyListeners();
+  }
+
   // ── Swipe deck (Tinder-style discovery) ────────────────────────────────
   List<Recipe> _swipeDeck = [];
   final Set<String> _liked = {};
