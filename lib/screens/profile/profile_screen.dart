@@ -38,23 +38,46 @@ class ProfileScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: AppColors.leafGradient,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                ),
-                child: Text(
-                  (user.profile.name.isNotEmpty
-                      ? user.profile.name[0].toUpperCase()
-                      : '🧞'),
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+              GestureDetector(
+                onTap: () => _showAvatarEditor(context, user),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: user.profile.avatarBgColor != null
+                            ? Color(user.profile.avatarBgColor!)
+                            : null,
+                        gradient: user.profile.avatarBgColor == null
+                            ? AppColors.leafGradient
+                            : null,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusLg),
+                      ),
+                      child: user.profile.avatarEmoji != null
+                          ? Text(user.profile.avatarEmoji!,
+                              style: const TextStyle(fontSize: 34))
+                          : _initials(user),
+                    ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.edit,
+                            size: 10, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 14),
@@ -223,6 +246,26 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _initials(UserProvider user) => Text(
+        user.profile.name.isNotEmpty
+            ? user.profile.name[0].toUpperCase()
+            : '🧞',
+        style: const TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      );
+
+  void _showAvatarEditor(BuildContext context, UserProvider user) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _AvatarEditorSheet(userProvider: user),
+    );
+  }
+
   void _showSettingsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -383,4 +426,153 @@ class RankedRecipeStub {
         missingIngredients: const [],
         aiReason: recipe.whyRecommended as String,
       );
+}
+
+
+class _AvatarEditorSheet extends StatelessWidget {
+  final UserProvider userProvider;
+
+  const _AvatarEditorSheet({required this.userProvider});
+
+  static const _emojis = [
+    '🧑‍🍳', '👩‍🍳', '🧞', '🍳', '🥗', '🍜',
+    '🍕', '🌮', '🥩', '🍣', '🥑', '🌶️',
+    '🧁', '🍰', '🥘', '🫕', '🍲', '🥙',
+    '🧆', '🫔', '🥨', '🍱', '🥟', '🍛',
+    '🐻', '🦊', '🐱', '🐶', '🦋', '🌻',
+  ];
+
+  static const _palette = [
+    Color(0xFFE2F3DF),
+    Color(0xFFFFF6D6),
+    Color(0xFFFFE3E3),
+    Color(0xFFDCF0FF),
+    Color(0xFFF0E6FF),
+    Color(0xFFFFEDD5),
+    Color(0xFFD6F5EE),
+    Color(0xFFFCE4EC),
+    Color(0xFFEDE7F6),
+    Color(0xFFE8F5E9),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          24, 20, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Customize your profile',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Choose your avatar',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _emojis.map((emoji) {
+              final selected = userProvider.profile.avatarEmoji == emoji;
+              return GestureDetector(
+                onTap: () async {
+                  await userProvider.setAvatarEmoji(emoji);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.primarySurface
+                        : AppColors.surfaceMuted,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected
+                          ? AppColors.primary
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: Text(emoji,
+                      style: const TextStyle(fontSize: 28)),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Background color',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _palette.map((color) {
+              final selected =
+                  userProvider.profile.avatarBgColor == color.toARGB32();
+              return GestureDetector(
+                onTap: () async {
+                  await userProvider.setAvatarBgColor(color.toARGB32());
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: selected
+                          ? AppColors.primary
+                          : AppColors.outline,
+                      width: selected ? 2.5 : 1,
+                    ),
+                  ),
+                  child: selected
+                      ? const Icon(Icons.check_rounded,
+                          size: 18, color: AppColors.primary)
+                      : null,
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
 }

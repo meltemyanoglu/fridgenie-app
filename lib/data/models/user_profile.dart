@@ -55,7 +55,7 @@ class UserProfile {
   final TasteProfile taste;
 
   /// Customisable avatar fields (null = use defaults).
-  final String? avatarImagePath;
+  final String? avatarEmoji;
   final int? avatarBgColor; // stored as ARGB int
 
   /// These values should be updated by UserProvider when the user cooks/saves meals.
@@ -74,7 +74,7 @@ class UserProfile {
     },
     this.defaultMood = Mood.cozy,
     this.taste = const TasteProfile(),
-    this.avatarImagePath,
+    this.avatarEmoji,
     this.avatarBgColor,
     this.currentStreak = 0,
     this.longestStreak = 0,
@@ -89,7 +89,7 @@ class UserProfile {
     Set<CuisineType>? favoriteCuisines,
     Mood? defaultMood,
     TasteProfile? taste,
-    Object? avatarImagePath = _sentinel,
+    Object? avatarEmoji = _sentinel,
     Object? avatarBgColor = _sentinel,
     int? currentStreak,
     int? longestStreak,
@@ -103,9 +103,9 @@ class UserProfile {
       favoriteCuisines: favoriteCuisines ?? this.favoriteCuisines,
       defaultMood: defaultMood ?? this.defaultMood,
       taste: taste ?? this.taste,
-      avatarImagePath: avatarImagePath == _sentinel
-          ? this.avatarImagePath
-          : avatarImagePath as String?,
+      avatarEmoji: avatarEmoji == _sentinel
+          ? this.avatarEmoji
+          : avatarEmoji as String?,
       avatarBgColor: avatarBgColor == _sentinel
           ? this.avatarBgColor
           : avatarBgColor as int?,

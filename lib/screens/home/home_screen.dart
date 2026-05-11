@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -579,8 +576,7 @@ class _ChefHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = context.watch<UserProvider>();
-    final profile = userProvider.profile;
+    final profile = context.watch<UserProvider>().profile;
     final bgColor = profile.avatarBgColor != null
         ? Color(profile.avatarBgColor!)
         : null;
@@ -600,49 +596,19 @@ class _ChefHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => _showAvatarEditor(context, userProvider),
-            child: Stack(
-              children: [
-                Container(
-                  width: 74,
-                  height: 74,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    gradient: bgColor == null ? AppColors.heroGradient : null,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: profile.avatarImagePath != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
-                          child: Image.file(
-                            File(profile.avatarImagePath!),
-                            width: 74,
-                            height: 74,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const _AnimatedChefEmoji(),
-                          ),
-                        )
-                      : const _AnimatedChefEmoji(),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Icon(Icons.edit, size: 11, color: Colors.white),
-                  ),
-                ),
-              ],
+          Container(
+            width: 74,
+            height: 74,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: bgColor,
+              gradient: bgColor == null ? AppColors.heroGradient : null,
+              borderRadius: BorderRadius.circular(28),
             ),
+            child: profile.avatarEmoji != null
+                ? Text(profile.avatarEmoji!,
+                    style: const TextStyle(fontSize: 40))
+                : const _AnimatedChefEmoji(),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -753,212 +719,8 @@ class _ChefHeader extends StatelessWidget {
     );
   }
 
-  void _showAvatarEditor(BuildContext context, UserProvider userProvider) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _AvatarEditorSheet(userProvider: userProvider),
-    );
-  }
 }
 
-class _AvatarEditorSheet extends StatelessWidget {
-  final UserProvider userProvider;
-
-  const _AvatarEditorSheet({required this.userProvider});
-
-  static const _palette = [
-    Color(0xFFE2F3DF), // mint green
-    Color(0xFFFFF6D6), // soft yellow
-    Color(0xFFFFE3E3), // blush pink
-    Color(0xFFDCF0FF), // sky blue
-    Color(0xFFF0E6FF), // lavender
-    Color(0xFFFFEDD5), // peach
-    Color(0xFFD6F5EE), // teal
-    Color(0xFFFCE4EC), // rose
-    Color(0xFFEDE7F6), // purple
-    Color(0xFFE8F5E9), // sage
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-          24, 20, 24, 24 + MediaQuery.of(context).viewInsets.bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Customize your profile',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Photo picker
-          Row(
-            children: [
-              Expanded(
-                child: _EditorButton(
-                  icon: Icons.photo_library_rounded,
-                  label: 'Choose photo',
-                  onTap: () async {
-                    final picker = ImagePicker();
-                    final img = await picker.pickImage(
-                      source: ImageSource.gallery,
-                      maxWidth: 400,
-                      maxHeight: 400,
-                      imageQuality: 85,
-                    );
-                    if (img != null) {
-                      await userProvider.setAvatarImage(img.path);
-                    }
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _EditorButton(
-                  icon: Icons.camera_alt_rounded,
-                  label: 'Take photo',
-                  onTap: () async {
-                    final picker = ImagePicker();
-                    final img = await picker.pickImage(
-                      source: ImageSource.camera,
-                      maxWidth: 400,
-                      maxHeight: 400,
-                      imageQuality: 85,
-                    );
-                    if (img != null) {
-                      await userProvider.setAvatarImage(img.path);
-                    }
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
-                ),
-              ),
-              if (userProvider.profile.avatarImagePath != null) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _EditorButton(
-                    icon: Icons.delete_outline_rounded,
-                    label: 'Remove',
-                    danger: true,
-                    onTap: () async {
-                      await userProvider.clearAvatarImage();
-                      if (context.mounted) Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Background color',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: _palette.map((color) {
-              final selected = userProvider.profile.avatarBgColor == color.toARGB32();
-              return GestureDetector(
-                onTap: () async {
-                  await userProvider.setAvatarBgColor(color.toARGB32());
-                  if (context.mounted) Navigator.of(context).pop();
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: selected ? AppColors.primary : AppColors.outline,
-                      width: selected ? 2.5 : 1,
-                    ),
-                  ),
-                  child: selected
-                      ? const Icon(Icons.check_rounded,
-                          size: 18, color: AppColors.primary)
-                      : null,
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EditorButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool danger;
-
-  const _EditorButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.danger = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = danger ? AppColors.tomato : AppColors.textPrimary;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: danger ? AppColors.tomatoSurface : AppColors.surfaceMuted,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: fg, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: fg,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _HeroCard extends StatelessWidget {
   final int selectedCount;
