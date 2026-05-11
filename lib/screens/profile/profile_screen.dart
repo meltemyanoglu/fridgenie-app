@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/extensions.dart';
-import '../../data/mock/mock_recipes.dart';
+import '../../data/models/recipe.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../routes.dart';
@@ -21,8 +21,8 @@ class ProfileScreen extends StatelessWidget {
     final user = context.watch<UserProvider>();
     final recipeProv = context.watch<RecipeProvider>();
     final favorites = recipeProv.favorites
-        .map((id) =>
-            recipeProv.generatedById(id) ?? MockRecipes.byId(id))
+        .map((id) => recipeProv.recipeByIdOrNull(id))
+        .whereType<Recipe>()
         .toList();
 
     return SafeArea(
@@ -144,8 +144,8 @@ class ProfileScreen extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: user.badges.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (_, i) {
+              separatorBuilder: (ctx, i) => const SizedBox(width: 10),
+              itemBuilder: (ctx, i) {
                 final b = user.badges[i];
                 return _BadgeChip(badge: b);
               },
@@ -394,7 +394,7 @@ class _BadgeChip extends StatelessWidget {
               assetPath,
               width: 56,
               height: 56,
-              errorBuilder: (_, __, ___) =>
+              errorBuilder: (ctx, err, st) =>
                   Text(emoji, style: const TextStyle(fontSize: 40)),
             ),
             const SizedBox(height: 8),

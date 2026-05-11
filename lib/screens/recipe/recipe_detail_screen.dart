@@ -10,7 +10,6 @@ import '../../providers/fridge_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/glass_card.dart';
-import '../../widgets/match_badge.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/section_header.dart';
 
@@ -73,7 +72,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   isFav ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
                   color: isFav ? AppColors.tomato : AppColors.textPrimary,
                 ),
-                onPressed: () => recipeProv.toggleFavorite(r.id),
+                onPressed: () {
+                  if (!isFav && recipeProv.isTitleAlreadySaved(r.id, r.title)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Bu tarif zaten kaydedilmiş!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+                  recipeProv.toggleFavorite(r.id, title: r.title);
+                },
               ),
               const SizedBox(width: 8),
             ],
@@ -105,7 +115,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       fit: BoxFit.cover,
                       loadingBuilder: (ctx, child, progress) =>
                           progress == null ? child : const SizedBox.shrink(),
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      errorBuilder: (ctx, err, st) => const SizedBox.shrink(),
                     ),
                   // Scrim so text stays readable over any photo
                   const DecoratedBox(
@@ -118,13 +128,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                       ),
                     ),
                   ),
-                  // Badges + title
-                  Positioned(
-                    left: 20,
-                    bottom: 80,
-                    child: MatchBadge(
-                        percent: widget.ranked.matchPercent, dark: true),
-                  ),
+                  // Title
                   Positioned(
                     left: 20,
                     right: 20,

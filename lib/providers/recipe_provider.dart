@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/mock/mock_recipes.dart';
 import '../data/models/enums.dart';
 import '../data/models/recipe.dart';
 import '../data/services/ai_service.dart';
@@ -207,12 +208,16 @@ class RecipeProvider extends ChangeNotifier {
 
   // ── Favorites — persisted to SharedPreferences ─────────────────────────
   final Set<String> _favorites = {};
+  // id → title cache so duplicate check works even across sessions
+  final Map<String, String> _favoriteTitles = {};
+
   bool isFavorite(String id) => _favorites.contains(id);
   Set<String> get favorites => Set.unmodifiable(_favorites);
 
   SharedPreferences? _prefs;
 
   static const _kFavoritesKey = 'fridgenie.favorites';
+  static const _kFavoriteTitlesKey = 'fridgenie.favorite_titles';
   static const _kGeneratedKey = 'fridgenie.generated_recipes';
   static const _kMaxGenerated = 50;
 
@@ -221,6 +226,8 @@ class RecipeProvider extends ChangeNotifier {
     final saved = _prefs!.getStringList(_kFavoritesKey) ?? [];
     _favorites.addAll(saved);
     _loadGeneratedRecipesFromPrefs();
+    _loadFavoriteTitlesFromPrefs();
+    _deduplicateFavorites();
     notifyListeners();
   }
 
@@ -233,13 +240,51 @@ class RecipeProvider extends ChangeNotifier {
       for (final item in list) {
         _generatedRecipes.add(Recipe.fromJson(item as Map<String, dynamic>));
       }
-    } catch (_) {
-      // Corrupt data — start fresh
+    } catch (_) {}
+  }
+
+  void _loadFavoriteTitlesFromPrefs() {
+    final raw = _prefs?.getString(_kFavoriteTitlesKey);
+    if (raw == null) return;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      map.forEach((k, v) => _favoriteTitles[k] = v as String);
+    } catch (_) {}
+  }
+
+  /// Remove orphaned IDs (recipe not found anywhere) and title-duplicates.
+  void _deduplicateFavorites() {
+    final seenTitles = <String>{};
+    final toRemove = <String>[];
+    for (final id in _favorites.toList()) {
+      final title = _favoriteTitles[id] ?? recipeByIdOrNull(id)?.title;
+      if (title == null) {
+        // Can't resolve this recipe — orphan, remove it.
+        toRemove.add(id);
+        continue;
+      }
+      final key = title.trim().toLowerCase();
+      if (seenTitles.contains(key)) {
+        toRemove.add(id);
+      } else {
+        seenTitles.add(key);
+      }
     }
+    if (toRemove.isEmpty) return;
+    for (final id in toRemove) {
+      _favorites.remove(id);
+      _favoriteTitles.remove(id);
+    }
+    _saveFavorites();
+    _saveFavoriteTitles();
   }
 
   void _saveFavorites() {
     _prefs?.setStringList(_kFavoritesKey, _favorites.toList());
+  }
+
+  void _saveFavoriteTitles() {
+    _prefs?.setString(_kFavoriteTitlesKey, jsonEncode(_favoriteTitles));
   }
 
   void _saveGeneratedRecipes() {
@@ -250,14 +295,17 @@ class RecipeProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> toggleFavorite(String id) async {
+  void toggleFavorite(String id, {String? title}) {
     if (_favorites.contains(id)) {
       _favorites.remove(id);
+      _favoriteTitles.remove(id);
     } else {
       _favorites.add(id);
+      if (title != null) _favoriteTitles[id] = title;
     }
     notifyListeners();
     _saveFavorites();
+    _saveFavoriteTitles();
   }
 
   // ── Generated recipes (Gemini / mock) ──────────────────────────────────
@@ -269,6 +317,31 @@ class RecipeProvider extends ChangeNotifier {
       if (r.id == id) return r;
     }
     return null;
+  }
+
+  Recipe? recipeByIdOrNull(String id) {
+    final gen = generatedById(id);
+    if (gen != null) return gen;
+    try {
+      return MockRecipes.all.firstWhere((r) => r.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// True if a *different* favorited recipe already has the same title.
+  bool isTitleAlreadySaved(String id, String title) {
+    final normalised = title.trim().toLowerCase();
+    for (final favId in _favorites) {
+      if (favId == id) continue;
+      // Check persisted title map first (works across sessions)
+      final saved = _favoriteTitles[favId];
+      if (saved != null && saved.trim().toLowerCase() == normalised) return true;
+      // Fallback: live recipe lookup
+      final r = recipeByIdOrNull(favId);
+      if (r != null && r.title.trim().toLowerCase() == normalised) return true;
+    }
+    return false;
   }
 
   void addGeneratedRecipe(Recipe recipe) {
