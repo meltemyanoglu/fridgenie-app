@@ -137,11 +137,12 @@ class _PantryScreenState extends State<PantryScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               children: fridge.inventory.map((ing) {
                 return IngredientChip(
                   ingredient: ing,
+                  compact: true,
                   selected: fridge.isSelected(ing.id),
                   onTap: () => fridge.toggleSelected(ing.id),
                   onRemove: () => fridge.toggleInventory(ing.id),
@@ -158,16 +159,14 @@ class _PantryScreenState extends State<PantryScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 6,
+            runSpacing: 6,
             children: all
                 .where((i) => !fridge.isInInventory(i.id))
-                .map(
-                  (ing) => _AddChip(
-                    ingredient: ing,
-                    onTap: () => fridge.toggleInventory(ing.id),
-                  ),
-                )
+                .map((ing) => _AddChip(
+                      ingredient: ing,
+                      onTap: () => fridge.toggleInventory(ing.id),
+                    ))
                 .toList(),
           ),
         ],
@@ -233,7 +232,7 @@ class _AddChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
@@ -242,19 +241,19 @@ class _AddChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(ingredient.emoji, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
+            Text(ingredient.emoji, style: const TextStyle(fontSize: 13)),
+            const SizedBox(width: 5),
             Text(
               ingredient.name,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 11,
                 color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(width: 4),
             const Icon(Icons.add_rounded,
-                size: 16, color: AppColors.primaryDark),
+                size: 14, color: AppColors.primaryDark),
           ],
         ),
       ),

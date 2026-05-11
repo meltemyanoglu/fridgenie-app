@@ -147,10 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = context.watch<UserProvider>();
     final tip = _ai.tipOfTheDay();
 
-    final visibleIngredients = _showAllIngredients
-        ? MockIngredients.common
-        : MockIngredients.common.take(9).toList();
-
     final categoryTabs = RecipeCategory.values
         .map(
           (c) => PillTab<RecipeCategory>(
@@ -229,45 +225,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: visibleIngredients.map((ing) {
-                    final selected = fridge.isSelected(ing.id);
-                    return AnimatedScale(
-                      scale: selected ? 1.04 : 1.0,
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOutBack,
-                      child: IngredientChip(
-                        ingredient: ing,
-                        selected: selected,
-                        compact: true,
-                        onTap: () {
-                          fridge.toggleSelected(ing.id);
-                          _regenerate();
-                        },
-                      ),
-                    );
-                  }).toList(),
+                _IngredientGrid(
+                  ingredients: MockIngredients.common,
+                  showAll: _showAllIngredients,
+                  selectedIds: fridge.selectedIds,
+                  onTap: (id) {
+                    fridge.toggleSelected(id);
+                    _regenerate();
+                  },
+                  onToggleShowAll: () =>
+                      setState(() => _showAllIngredients = !_showAllIngredients),
                 ),
-
-                if (MockIngredients.common.length > 9) ...[
-                  const SizedBox(height: 10),
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () =>
-                          setState(() => _showAllIngredients = !_showAllIngredients),
-                      icon: Icon(
-                        _showAllIngredients
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                      ),
-                      label: Text(
-                        _showAllIngredients ? 'Show less' : 'Show all ingredients',
-                      ),
-                    ),
-                  ),
-                ],
 
                 const SizedBox(height: AppSpacing.lg),
 
@@ -907,6 +875,101 @@ class _SuggestionsLoading extends StatelessWidget {
           child: const CircularProgressIndicator(color: AppColors.primary),
         ),
       ),
+    );
+  }
+}
+
+/// Ingredient chip grid: shows complete rows initially, expands on "See all".
+class _IngredientGrid extends StatelessWidget {
+  final List<dynamic> ingredients;
+  final bool showAll;
+  final Set<String> selectedIds;
+  final void Function(String id) onTap;
+  final VoidCallback onToggleShowAll;
+
+  const _IngredientGrid({
+    required this.ingredients,
+    required this.showAll,
+    required this.selectedIds,
+    required this.onTap,
+    required this.onToggleShowAll,
+  });
+
+  // Estimate chip width: emoji(13) + gap(5) + text + horizontal padding(16)
+  // Average ingredient name ~8 chars × 6.5px ≈ 52px → total ~86px
+  static double _estimateChipWidth(String name) =>
+      13 + 5 + name.length * 6.5 + 16;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        const hSpacing = 6.0;
+
+        // Figure out how many complete rows fit in the "collapsed" view
+        int count = 0;
+        double rowWidth = 0;
+        int rows = 0;
+        const maxRows = 3;
+
+        for (final ing in ingredients) {
+          final chipW = _estimateChipWidth(ing.name as String);
+          if (rowWidth + chipW > maxWidth + hSpacing) {
+            rows++;
+            rowWidth = chipW + hSpacing;
+          } else {
+            rowWidth += chipW + hSpacing;
+          }
+          if (rows >= maxRows) break;
+          count++;
+        }
+
+        final visible = showAll ? ingredients : ingredients.take(count).toList();
+        final hasMore = ingredients.length > count;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: hSpacing,
+              runSpacing: 6,
+              children: visible.map((ing) {
+                final selected = selectedIds.contains(ing.id as String);
+                return AnimatedScale(
+                  scale: selected ? 1.04 : 1.0,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutBack,
+                  child: IngredientChip(
+                    ingredient: ing,
+                    selected: selected,
+                    compact: true,
+                    onTap: () => onTap(ing.id as String),
+                  ),
+                );
+              }).toList(),
+            ),
+            if (hasMore) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: onToggleShowAll,
+                  icon: Icon(
+                    showAll
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                  ),
+                  label: Text(
+                    showAll ? 'Show less' : 'See all ingredients',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

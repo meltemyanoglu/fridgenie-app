@@ -23,7 +23,7 @@ class PillTabBar<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 44,
+      height: 36,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 0),
@@ -87,7 +87,7 @@ class _Pill extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? color : AppColors.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
@@ -99,14 +99,14 @@ class _Pill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 6),
+            Text(emoji, style: const TextStyle(fontSize: 12)),
+            const SizedBox(width: 5),
             Text(
               label,
               style: TextStyle(
                 color: selected ? Colors.white : AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
-                fontSize: 13,
+                fontSize: 11.5,
               ),
             ),
           ],

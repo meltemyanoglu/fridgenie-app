@@ -171,7 +171,7 @@ class _MatchesTab extends StatelessWidget {
         children: [
           // Quick mode launchers
           SizedBox(
-            height: 175,
+            height: 140,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
