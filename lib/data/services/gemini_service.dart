@@ -346,7 +346,7 @@ Valid values:
       title: _str(j['title'], 'Genie Special'),
       tagline: _str(j['tagline'], ''),
       emoji: _str(j['emoji'], '🍽️'),
-      photoUrl: '',
+      photoUrl: _photoFor(category, _str(j['title'], id)),
       gradientColors: _gradientFor(category),
       category: category,
       difficulty: difficulty,
@@ -527,6 +527,50 @@ Valid values:
       }
     }
     return out.toList();
+  }
+
+  static const _photos = {
+    RecipeCategory.comfort: [
+      'photo-1473093226795-af9932fe5856', // pasta
+      'photo-1547592166-23ac45744acd', // soup
+      'photo-1532550907401-a500c9a57435', // roasted chicken
+      'photo-1543339494-b4cd4f7ba686', // casserole
+      'photo-1476124369491-e7addf5db371', // one-pot
+    ],
+    RecipeCategory.healthy: [
+      'photo-1512621776951-a57141f2eefd', // salad
+      'photo-1490645935967-10de6ba17061', // grain bowl
+      'photo-1540914124281-342587941389', // veggie bowl
+      'photo-1526470498-9ae73c665de8', // smoothie bowl
+      'photo-1512916194211-3f2b7f5f7f1a', // avocado toast
+    ],
+    RecipeCategory.quick: [
+      'photo-1565557623262-b51c2513a641', // stir fry
+      'photo-1612874742237-6526221588e3', // fried rice
+      'photo-1525351484163-7529414344d8', // eggs breakfast
+      'photo-1553909489-cd47e0907980', // sandwich
+      'photo-1628294896516-04e5ce6938d0', // wrap
+    ],
+    RecipeCategory.budget: [
+      'photo-1546069901-ba9599a7e63c', // budget bowl
+      'photo-1604908176997-125f25cc6f3d', // simple meal
+      'photo-1505253758473-96b7015fcd40', // noodles
+      'photo-1569718212165-3a8278d5f624', // ramen
+      'photo-1598866594230-a7c12756260f', // rice dish
+    ],
+    RecipeCategory.useItUp: [
+      'photo-1541519227354-08fa5d50c44d', // frittata
+      'photo-1604152135912-04a022e23696', // leftover bowl
+      'photo-1626700051175-6818013e1d4f', // stew
+      'photo-1559847844-5315695dadae', // mixed dish
+      'photo-1484980972926-edee96e0960d', // salad use-up
+    ],
+  };
+
+  static String _photoFor(RecipeCategory cat, String seed) {
+    final list = _photos[cat] ?? _photos[RecipeCategory.comfort]!;
+    final idx = seed.hashCode.abs() % list.length;
+    return 'https://images.unsplash.com/${list[idx]}?w=800&auto=format&fit=crop';
   }
 
   static List<Color> _gradientFor(RecipeCategory cat) {

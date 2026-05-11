@@ -78,56 +78,94 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
               const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: r.gradientColors,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -20,
-                      bottom: -30,
-                      child: Text(r.emoji,
-                          style: const TextStyle(fontSize: 220)),
-                    ),
-                    Positioned(
-                      left: 20,
-                      bottom: 80,
-                      child: MatchBadge(
-                          percent: widget.ranked.matchPercent, dark: true),
-                    ),
-                    Positioned(
-                      left: 20,
-                      right: 20,
-                      bottom: 20,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            r.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall
-                                ?.copyWith(color: AppColors.textPrimary),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            r.tagline,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Base: gradient + emoji (always visible as fallback)
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: r.gradientColors,
                       ),
                     ),
-                  ],
-                ),
+                    child: r.photoUrl.isEmpty
+                        ? Align(
+                            alignment: const Alignment(1.1, 1.1),
+                            child: Text(r.emoji,
+                                style: const TextStyle(fontSize: 160)),
+                          )
+                        : null,
+                  ),
+                  // Photo overlay when available
+                  if (r.photoUrl.isNotEmpty)
+                    Image.network(
+                      r.photoUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (ctx, child, progress) =>
+                          progress == null ? child : const SizedBox.shrink(),
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  // Scrim so text stays readable over any photo
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black54],
+                        stops: [0.45, 1.0],
+                      ),
+                    ),
+                  ),
+                  // Badges + title
+                  Positioned(
+                    left: 20,
+                    bottom: 80,
+                    child: MatchBadge(
+                        percent: widget.ranked.matchPercent, dark: true),
+                  ),
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 20,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          r.title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .displaySmall
+                              ?.copyWith(
+                                color: r.photoUrl.isNotEmpty
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                shadows: r.photoUrl.isNotEmpty
+                                    ? [
+                                        const Shadow(
+                                          color: Colors.black45,
+                                          blurRadius: 8,
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          r.tagline,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: r.photoUrl.isNotEmpty
+                                ? Colors.white70
+                                : AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
