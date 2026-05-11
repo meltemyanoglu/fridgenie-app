@@ -12,8 +12,9 @@ import '../data/models/ingredient.dart';
 class MagnetItem {
   final String key;
   final String emoji;
-  final String? imagePath; // e.g. 'assets/magnets/cat.png'
-  const MagnetItem({required this.key, required this.emoji, this.imagePath});
+  final String? imagePath;
+  final double size; // display size on the door
+  const MagnetItem({required this.key, required this.emoji, this.imagePath, this.size = 64});
 }
 
 class FridgeDoorWidget extends StatefulWidget {
@@ -45,34 +46,37 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
   static const _kPlacementsKey = 'fridge_magnet_placements';
 
   // All magnets available in the tray
+  static const _large = 88.0;
+  static const _normal = 64.0;
+
   static const _trayMagnets = [
-    MagnetItem(key: 'm1',  emoji: '🧲', imagePath: 'assets/magnets/magnet1.png'),
-    MagnetItem(key: 'm2',  emoji: '🧲', imagePath: 'assets/magnets/magnet2.png'),
-    MagnetItem(key: 'm3',  emoji: '🧲', imagePath: 'assets/magnets/magnet3.png'),
-    MagnetItem(key: 'm4',  emoji: '🧲', imagePath: 'assets/magnets/magnet4.png'),
-    MagnetItem(key: 'm5',  emoji: '🧲', imagePath: 'assets/magnets/magnet5.png'),
-    MagnetItem(key: 'm6',  emoji: '🧲', imagePath: 'assets/magnets/magnet6.png'),
-    MagnetItem(key: 'm7',  emoji: '🧲', imagePath: 'assets/magnets/magnet7.png'),
-    MagnetItem(key: 'm8',  emoji: '🧲', imagePath: 'assets/magnets/magnet8.png'),
-    MagnetItem(key: 'm9',  emoji: '🧲', imagePath: 'assets/magnets/magnet9.png'),
-    MagnetItem(key: 'm10', emoji: '🧲', imagePath: 'assets/magnets/magnet10.png'),
-    MagnetItem(key: 'm11', emoji: '🧲', imagePath: 'assets/magnets/magnet11.png'),
-    MagnetItem(key: 'm12', emoji: '🧲', imagePath: 'assets/magnets/magnet12.png'),
-    MagnetItem(key: 'm13', emoji: '🧲', imagePath: 'assets/magnets/magnet13.png'),
-    MagnetItem(key: 'm14', emoji: '🧲', imagePath: 'assets/magnets/magnet14.png'),
-    MagnetItem(key: 'm15', emoji: '🧲', imagePath: 'assets/magnets/magnet15.png'),
-    MagnetItem(key: 'm16', emoji: '🧲', imagePath: 'assets/magnets/magnet16.png'),
-    MagnetItem(key: 'm17', emoji: '🧲', imagePath: 'assets/magnets/magnet17.png'),
-    MagnetItem(key: 'm18', emoji: '🧲', imagePath: 'assets/magnets/magnet18.png'),
-    MagnetItem(key: 'm19', emoji: '🧲', imagePath: 'assets/magnets/magnet19.png'),
-    MagnetItem(key: 'm20', emoji: '🧲', imagePath: 'assets/magnets/magnet20.png'),
-    MagnetItem(key: 'm21', emoji: '🧲', imagePath: 'assets/magnets/magnet21.png'),
-    MagnetItem(key: 'm22', emoji: '🧲', imagePath: 'assets/magnets/magnet22.png'),
-    MagnetItem(key: 'm23', emoji: '🧲', imagePath: 'assets/magnets/magnet23.png'),
-    MagnetItem(key: 'm24', emoji: '🧲', imagePath: 'assets/magnets/magnet24.png'),
-    MagnetItem(key: 'm25', emoji: '🧲', imagePath: 'assets/magnets/magnet25.png'),
-    MagnetItem(key: 'm26', emoji: '🧲', imagePath: 'assets/magnets/magnet26.png'),
-    MagnetItem(key: 'm27', emoji: '🧲', imagePath: 'assets/magnets/magnet27.png'),
+    MagnetItem(key: 'm1',  emoji: '🧲', imagePath: 'assets/magnets/magnet1.png',  size: _large),
+    MagnetItem(key: 'm2',  emoji: '🧲', imagePath: 'assets/magnets/magnet2.png',  size: _normal),
+    MagnetItem(key: 'm3',  emoji: '🧲', imagePath: 'assets/magnets/magnet3.png',  size: _large),
+    MagnetItem(key: 'm4',  emoji: '🧲', imagePath: 'assets/magnets/magnet4.png',  size: _large),
+    MagnetItem(key: 'm5',  emoji: '🧲', imagePath: 'assets/magnets/magnet5.png',  size: _large),
+    MagnetItem(key: 'm6',  emoji: '🧲', imagePath: 'assets/magnets/magnet6.png',  size: _large),
+    MagnetItem(key: 'm7',  emoji: '🧲', imagePath: 'assets/magnets/magnet7.png',  size: _normal),
+    MagnetItem(key: 'm8',  emoji: '🧲', imagePath: 'assets/magnets/magnet8.png',  size: _normal),
+    MagnetItem(key: 'm9',  emoji: '🧲', imagePath: 'assets/magnets/magnet9.png',  size: _normal),
+    MagnetItem(key: 'm10', emoji: '🧲', imagePath: 'assets/magnets/magnet10.png', size: _normal),
+    MagnetItem(key: 'm11', emoji: '🧲', imagePath: 'assets/magnets/magnet11.png', size: _normal),
+    MagnetItem(key: 'm12', emoji: '🧲', imagePath: 'assets/magnets/magnet12.png', size: _normal),
+    MagnetItem(key: 'm13', emoji: '🧲', imagePath: 'assets/magnets/magnet13.png', size: _normal),
+    MagnetItem(key: 'm14', emoji: '🧲', imagePath: 'assets/magnets/magnet14.png', size: _normal),
+    MagnetItem(key: 'm15', emoji: '🧲', imagePath: 'assets/magnets/magnet15.png', size: _normal),
+    MagnetItem(key: 'm16', emoji: '🧲', imagePath: 'assets/magnets/magnet16.png', size: _normal),
+    MagnetItem(key: 'm17', emoji: '🧲', imagePath: 'assets/magnets/magnet17.png', size: _normal),
+    MagnetItem(key: 'm18', emoji: '🧲', imagePath: 'assets/magnets/magnet18.png', size: _normal),
+    MagnetItem(key: 'm19', emoji: '🧲', imagePath: 'assets/magnets/magnet19.png', size: _normal),
+    MagnetItem(key: 'm20', emoji: '🧲', imagePath: 'assets/magnets/magnet20.png', size: _normal),
+    MagnetItem(key: 'm21', emoji: '🧲', imagePath: 'assets/magnets/magnet21.png', size: _normal),
+    MagnetItem(key: 'm22', emoji: '🧲', imagePath: 'assets/magnets/magnet22.png', size: _large),
+    MagnetItem(key: 'm23', emoji: '🧲', imagePath: 'assets/magnets/magnet23.png', size: _large),
+    MagnetItem(key: 'm24', emoji: '🧲', imagePath: 'assets/magnets/magnet24.png', size: _normal),
+    MagnetItem(key: 'm25', emoji: '🧲', imagePath: 'assets/magnets/magnet25.png', size: _normal),
+    MagnetItem(key: 'm26', emoji: '🧲', imagePath: 'assets/magnets/magnet26.png', size: _normal),
+    MagnetItem(key: 'm27', emoji: '🧲', imagePath: 'assets/magnets/magnet27.png', size: _large),
   ];
 
   // Default positions for newly placed magnets (cycles if more than list length)
@@ -240,8 +244,7 @@ class _FridgeDoor extends StatelessWidget {
     required this.onTapHandle,
   });
 
-  static const _totalH  = 420.0;
-  static const _magnetSize = 64.0;
+  static const _totalH = 420.0;
 
   @override
   Widget build(BuildContext context) {
@@ -343,11 +346,12 @@ class _FridgeDoor extends StatelessWidget {
             Builder(builder: (ctx) {
               final magnet = allMagnets.firstWhere(
                 (m) => m.key == entry.key,
-                orElse: () => MagnetItem(key: entry.key, emoji: '📌'),
+                orElse: () => const MagnetItem(key: '', emoji: '📌'),
               );
+              final s   = magnet.size;
               final pos = entry.value;
-              final left = pos.dx * (doorWidth - _magnetSize);
-              final top  = pos.dy * (_totalH - _magnetSize);
+              final left = pos.dx * (doorWidth - s);
+              final top  = pos.dy * (_totalH - s);
 
               return Positioned(
                 left: left,
@@ -355,12 +359,12 @@ class _FridgeDoor extends StatelessWidget {
                 child: GestureDetector(
                   onPanUpdate: (details) {
                     final cur = placements[entry.key]!;
-                    final dx = (cur.dx + details.delta.dx / (doorWidth - _magnetSize)).clamp(0.0, 1.0);
-                    final dy = (cur.dy + details.delta.dy / (_totalH - _magnetSize)).clamp(0.0, 1.0);
+                    final dx = (cur.dx + details.delta.dx / (doorWidth - s)).clamp(0.0, 1.0);
+                    final dy = (cur.dy + details.delta.dy / (_totalH - s)).clamp(0.0, 1.0);
                     onMoveMagnet(entry.key, dx, dy);
                   },
                   onPanEnd: (_) => onDragEnd(),
-                  child: _MagnetWidget(emoji: magnet.emoji, imagePath: magnet.imagePath),
+                  child: _MagnetWidget(emoji: magnet.emoji, imagePath: magnet.imagePath, size: s),
                 ),
               );
             }),
@@ -881,38 +885,38 @@ class _EmptyState extends StatelessWidget {
 class _MagnetWidget extends StatelessWidget {
   final String emoji;
   final String? imagePath;
-  const _MagnetWidget({required this.emoji, this.imagePath});
+  final double size;
+  const _MagnetWidget({required this.emoji, this.imagePath, this.size = 64});
 
   @override
   Widget build(BuildContext context) {
     if (imagePath != null) {
-      // Show PNG at natural aspect ratio — no crop, no background
-      // Drop shadow via DecoratedBox with transparent paint
       return SizedBox(
-        width: 64,
-        height: 64,
+        width: size,
+        height: size,
         child: Image.asset(
           imagePath!,
-          width: 64,
-          height: 64,
+          width: size,
+          height: size,
           fit: BoxFit.contain,
-          errorBuilder: (ctx, err, st) => _EmojiMagnet(emoji: emoji),
+          errorBuilder: (ctx, err, st) => _EmojiMagnet(emoji: emoji, size: size),
         ),
       );
     }
-    return _EmojiMagnet(emoji: emoji);
+    return _EmojiMagnet(emoji: emoji, size: size);
   }
 }
 
 class _EmojiMagnet extends StatelessWidget {
   final String emoji;
-  const _EmojiMagnet({required this.emoji});
+  final double size;
+  const _EmojiMagnet({required this.emoji, this.size = 64});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 52,
-      height: 52,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.90),
