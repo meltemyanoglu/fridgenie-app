@@ -9,7 +9,7 @@ import '../../data/models/enums.dart';
 import '../../data/models/ingredient.dart';
 import '../../providers/fridge_provider.dart';
 import '../../routes.dart';
-import '../../widgets/glass_card.dart';
+import '../../widgets/fridge_door_widget.dart';
 import '../../widgets/ingredient_chip.dart';
 import '../../widgets/section_header.dart';
 
@@ -52,44 +52,13 @@ class _PantryScreenState extends State<PantryScreen> {
             '${fridge.inventoryIds.length} items in pantry · ${fridge.selectedIds.length} chosen for cooking',
             style: context.text.bodyMedium,
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
 
-          // Scan CTA
-          GlassCard(
-            color: AppColors.primarySurface,
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.scan),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.leafGradient,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  child: const Icon(Icons.center_focus_strong_rounded,
-                      color: Colors.white),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Scan my fridge',
-                          style: context.text.titleLarge),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Point your camera, I\'ll AI-detect what\'s inside.',
-                        style: context.text.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_forward_rounded,
-                    color: AppColors.primaryDark),
-              ],
-            ),
+          FridgeDoorWidget(
+            inventoryIds: fridge.inventoryIds,
+            selectedIds: fridge.selectedIds,
+            onToggleSelected: fridge.toggleSelected,
+            onScanTap: () => Navigator.of(context).pushNamed(AppRoutes.scan),
           ),
           const SizedBox(height: AppSpacing.xl),
 
