@@ -271,20 +271,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                _AnimatedGenerateButton(
-                  loading: recipes.suggestionsState == RequestState.loading,
-                  disabled: fridge.selectedIds.isEmpty,
-                  onPressed: _regenerate,
-                ),
-
-                // "Cook something new" card — always visible.
-                // Uses Gemini when key is set; falls back to demo recipe.
-                const SizedBox(height: AppSpacing.sm),
-                _CookSomethingNewCard(
-                  disabled: fridge.selectedIds.isEmpty,
+                _SmartGenerateButton(
                   geminiAvailable: recipes.geminiAvailable,
-                  loading: recipes.geminiState == RequestState.loading,
-                  onTap: _generateNewRecipe,
+                  loading: recipes.geminiAvailable
+                      ? recipes.geminiState == RequestState.loading
+                      : recipes.suggestionsState == RequestState.loading,
+                  disabled: fridge.selectedIds.isEmpty,
+                  onPressed: recipes.geminiAvailable
+                      ? _generateNewRecipe
+                      : _regenerate,
                 ),
 
                 const SizedBox(height: AppSpacing.lg),
