@@ -220,6 +220,12 @@ class GeminiService {
 
   // ── Prompt builders ─────────────────────────────────────────────────────
 
+  static const _cuisinePool = [
+    'Mexican', 'Japanese', 'Indian', 'Mediterranean', 'Middle Eastern',
+    'Turkish', 'Korean', 'Thai', 'Chinese', 'French', 'American',
+    'Italian', 'Greek', 'Moroccan', 'Vietnamese', 'Spanish',
+  ];
+
   String _buildSinglePrompt({
     required List<String> ingredients,
     required Set<DietaryPreference> dietary,
@@ -229,6 +235,10 @@ class GeminiService {
     required GenieMode mode,
     required List<String> avoidTitles,
   }) {
+    // Pick a random cuisine suggestion when none is specified, to avoid bias.
+    final cuisineSeed = cuisine?.label ??
+        _cuisinePool[DateTime.now().millisecondsSinceEpoch % _cuisinePool.length];
+
     final parts = <String>[
       'You are Fridgenie, a warm and creative AI chef.',
       'Generate exactly ONE delicious recipe using the provided ingredients.',
@@ -237,11 +247,12 @@ class GeminiService {
       if (dietary.isNotEmpty)
         'Dietary requirements: ${dietary.map((d) => d.label).join(', ')}',
       if (mood != null) 'User mood: ${mood.label} — ${mood.tagline}',
-      if (cuisine != null) 'Preferred cuisine style: ${cuisine.label}',
+      'Cuisine inspiration for this recipe: $cuisineSeed (adapt freely if ingredients suggest something better)',
       if (skill != null) 'Cooking skill level: ${skill.label}',
       _modeInstruction(mode),
       if (avoidTitles.isNotEmpty)
         'Do NOT use any of these titles: ${avoidTitles.join(', ')}',
+      'IMPORTANT: Vary the cuisine — do not default to Italian unless the ingredients strongly call for it.',
       '',
       'Return ONLY valid JSON — no markdown, no prose — with this exact structure:',
       _singleRecipeSchema(),
@@ -318,8 +329,8 @@ class GeminiService {
     {"missing": "ingredient", "swap": "alternative", "reason": "why it works"}
   ],
   "moods": ["cozy"],
-  "cuisines": ["italian"],
-  "dietary": ["vegetarian"],
+  "cuisines": ["mexican"],
+  "dietary": ["noRestrictions"],
   "whyRecommended": "Why this is perfect right now (1–2 sentences)",
   "tags": ["quick", "one-pan"],
   "matchScore": 0.9
