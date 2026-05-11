@@ -117,7 +117,7 @@ class RecipeCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -125,14 +125,14 @@ class RecipeCard extends StatelessWidget {
                       children: [
                         Text(
                           r.category.emoji,
-                          style: const TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 13),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         Text(
                           r.category.label,
                           style: TextStyle(
                             color: r.category.color,
-                            fontSize: 11.5,
+                            fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.4,
                           ),
@@ -141,21 +141,21 @@ class RecipeCard extends StatelessWidget {
                         _DifficultyDots(level: r.difficulty.value),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       r.title,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       r.tagline,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         _NutritionPill(
@@ -213,7 +213,7 @@ class _RecipeHeroPhoto extends StatelessWidget {
             if (progress == null) return child;
             return const SizedBox.shrink();
           },
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          errorBuilder: (ctx, err, st) => const SizedBox.shrink(),
         ),
       ],
     );
