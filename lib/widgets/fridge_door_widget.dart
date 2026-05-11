@@ -206,10 +206,8 @@ class _FridgeDoor extends StatelessWidget {
     required this.onTapHandle,
   });
 
-  static const _freezerH = 72.0;
-  static const _dividerH = 5.0;
-  static const _totalH   = 420.0;
-  static const _fridgeH  = _totalH - _freezerH - _dividerH;
+  static const _totalH  = 420.0;
+  static const _magnetSize = 64.0;
 
   @override
   Widget build(BuildContext context) {
@@ -219,92 +217,66 @@ class _FridgeDoor extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Body gradient
+          // ── Door panel — full rounded, radial gloss ───────────────────
           Positioned.fill(
             child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFADC7A8), Color(0xFF88A884), Color(0xFF5E8060)],
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                gradient: RadialGradient(
+                  center: const Alignment(-0.10, -0.50),
+                  radius: 1.25,
+                  colors: const [
+                    Color(0xFFD4EACD),
+                    Color(0xFF97BB92),
+                    Color(0xFF6B9870),
+                    Color(0xFF4C7252),
+                  ],
+                  stops: const [0.0, 0.38, 0.72, 1.0],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.22),
+                    blurRadius: 28,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // Freezer compartment
+          // ── Top specular highlight ────────────────────────────────────
           Positioned(
-            top: 0, left: 0, right: 0, height: _freezerH,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF6F9472), Color(0xFF517354)],
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (i) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  width: 22, height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.38),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                )),
-              ),
-            ),
-          ),
-
-          // Divider
-          Positioned(
-            top: _freezerH, left: 0, right: 0, height: _dividerH,
-            child: Container(color: Colors.black.withValues(alpha: 0.28)),
-          ),
-
-          // Placed magnets — draggable
-          for (final entry in placements.entries)
-            Builder(builder: (ctx) {
-              final magnet = allMagnets.firstWhere(
-                (m) => m.key == entry.key,
-                orElse: () => MagnetItem(key: entry.key, emoji: '📌'),
-              );
-              final pos = entry.value;
-              final left = pos.dx * doorWidth - 24;
-              final top  = _freezerH + _dividerH + pos.dy * _fridgeH - 24;
-
-              return Positioned(
-                left: left,
-                top: top,
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    final cur = placements[entry.key]!;
-                    final dx = (cur.dx + details.delta.dx / doorWidth).clamp(0.0, 0.90);
-                    final dy = (cur.dy + details.delta.dy / _fridgeH).clamp(0.0, 0.90);
-                    onMoveMagnet(entry.key, dx, dy);
-                  },
-                  child: _MagnetWidget(
-                    emoji: magnet.emoji,
-                    imagePath: magnet.imagePath,
-                  ),
-                ),
-              );
-            }),
-
-          // Gloss sheen
-          Positioned.fill(
+            top: 0, left: 0, right: 0, height: 4,
             child: IgnorePointer(
               child: Container(
                 decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.centerRight,
                     colors: [
+                      Colors.white.withValues(alpha: 0.65),
                       Colors.white.withValues(alpha: 0.15),
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.07),
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Right-edge volume shadow ───────────────────────────────────
+          Positioned(
+            top: 0, right: 0, bottom: 0, width: 12,
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(28)),
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.16),
                     ],
                   ),
                 ),
@@ -312,34 +284,126 @@ class _FridgeDoor extends StatelessWidget {
             ),
           ),
 
-          // Chrome handle
+          // ── Bottom edge shadow ────────────────────────────────────────
           Positioned(
-            right: 14, top: 120,
-            child: GestureDetector(
-              onTap: onTapHandle,
-              behavior: HitTestBehavior.opaque,
+            bottom: 0, left: 0, right: 0, height: 16,
+            child: IgnorePointer(
               child: Container(
-                width: 16, height: 100,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [Color(0xFFB8B8B8), Color(0xFFFFFFFF), Color(0xFF989898)],
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.14),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(-3, 3),
-                    ),
-                  ],
                 ),
               ),
             ),
           ),
 
-          // Open hint
+          // ── Magnets (draggable) ───────────────────────────────────────
+          for (final entry in placements.entries)
+            Builder(builder: (ctx) {
+              final magnet = allMagnets.firstWhere(
+                (m) => m.key == entry.key,
+                orElse: () => MagnetItem(key: entry.key, emoji: '📌'),
+              );
+              final pos = entry.value;
+              final left = pos.dx * (doorWidth - _magnetSize);
+              final top  = pos.dy * (_totalH - _magnetSize);
+
+              return Positioned(
+                left: left,
+                top: top,
+                child: GestureDetector(
+                  onPanUpdate: (details) {
+                    final cur = placements[entry.key]!;
+                    final dx = (cur.dx + details.delta.dx / (doorWidth - _magnetSize)).clamp(0.0, 1.0);
+                    final dy = (cur.dy + details.delta.dy / (_totalH - _magnetSize)).clamp(0.0, 1.0);
+                    onMoveMagnet(entry.key, dx, dy);
+                  },
+                  child: _MagnetWidget(emoji: magnet.emoji, imagePath: magnet.imagePath),
+                ),
+              );
+            }),
+
+          // ── Handle (bracket + chrome bar + bracket) ───────────────────
+          Positioned(
+            right: 16,
+            top: 120,
+            child: GestureDetector(
+              onTap: onTapHandle,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                children: [
+                  Container(
+                    width: 28, height: 14,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(7),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFEEEEEE), Color(0xFFAAAAAA)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.40),
+                          blurRadius: 6, offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 16, height: 115,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Color(0xFF666666), Color(0xFFDDDDDD),
+                          Color(0xFFFFFFFF), Color(0xFFEEEEEE), Color(0xFF888888),
+                        ],
+                        stops: [0.0, 0.25, 0.50, 0.75, 1.0],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          blurRadius: 12, offset: const Offset(-4, 4),
+                        ),
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          blurRadius: 3, offset: const Offset(2, -1),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 28, height: 14,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(7),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFEEEEEE), Color(0xFFAAAAAA)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.40),
+                          blurRadius: 6, offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Open hint ─────────────────────────────────────────────────
           Positioned(
             bottom: 14, left: 0, right: 0,
             child: Center(
@@ -786,51 +850,47 @@ class _MagnetWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shadow = BoxShadow(
-      color: Colors.black.withValues(alpha: 0.28),
-      blurRadius: 6,
-      offset: const Offset(1, 2),
-    );
-
     if (imagePath != null) {
-      return Container(
-        width: 48, height: 48,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [shadow],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.asset(
-            imagePath!,
-            width: 48, height: 48,
-            fit: BoxFit.cover,
-            errorBuilder: (ctx, err, st) =>
-                _EmojiMagnet(emoji: emoji, shadow: shadow),
-          ),
+      // Show PNG at natural aspect ratio — no crop, no background
+      // Drop shadow via DecoratedBox with transparent paint
+      return SizedBox(
+        width: 64,
+        height: 64,
+        child: Image.asset(
+          imagePath!,
+          width: 64,
+          height: 64,
+          fit: BoxFit.contain,
+          errorBuilder: (ctx, err, st) => _EmojiMagnet(emoji: emoji),
         ),
       );
     }
-    return _EmojiMagnet(emoji: emoji, shadow: shadow);
+    return _EmojiMagnet(emoji: emoji);
   }
 }
 
 class _EmojiMagnet extends StatelessWidget {
   final String emoji;
-  final BoxShadow shadow;
-  const _EmojiMagnet({required this.emoji, required this.shadow});
+  const _EmojiMagnet({required this.emoji});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44, height: 44,
+      width: 52,
+      height: 52,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
+        color: Colors.white.withValues(alpha: 0.90),
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [shadow],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 6,
+            offset: const Offset(1, 2),
+          ),
+        ],
       ),
-      child: Text(emoji, style: const TextStyle(fontSize: 22)),
+      child: Text(emoji, style: const TextStyle(fontSize: 26)),
     );
   }
 }
