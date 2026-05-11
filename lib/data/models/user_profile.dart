@@ -54,6 +54,10 @@ class UserProfile {
   final Mood defaultMood;
   final TasteProfile taste;
 
+  /// Customisable avatar fields (null = use defaults).
+  final String? avatarImagePath;
+  final int? avatarBgColor; // stored as ARGB int
+
   /// These values should be updated by UserProvider when the user cooks/saves meals.
   final int currentStreak;
   final int longestStreak;
@@ -70,8 +74,8 @@ class UserProfile {
     },
     this.defaultMood = Mood.cozy,
     this.taste = const TasteProfile(),
-
-    // Start from real user progress instead of fake demo numbers.
+    this.avatarImagePath,
+    this.avatarBgColor,
     this.currentStreak = 0,
     this.longestStreak = 0,
     this.recipesCooked = 0,
@@ -85,6 +89,8 @@ class UserProfile {
     Set<CuisineType>? favoriteCuisines,
     Mood? defaultMood,
     TasteProfile? taste,
+    Object? avatarImagePath = _sentinel,
+    Object? avatarBgColor = _sentinel,
     int? currentStreak,
     int? longestStreak,
     int? recipesCooked,
@@ -97,6 +103,12 @@ class UserProfile {
       favoriteCuisines: favoriteCuisines ?? this.favoriteCuisines,
       defaultMood: defaultMood ?? this.defaultMood,
       taste: taste ?? this.taste,
+      avatarImagePath: avatarImagePath == _sentinel
+          ? this.avatarImagePath
+          : avatarImagePath as String?,
+      avatarBgColor: avatarBgColor == _sentinel
+          ? this.avatarBgColor
+          : avatarBgColor as int?,
       currentStreak: currentStreak ?? this.currentStreak,
       longestStreak: longestStreak ?? this.longestStreak,
       recipesCooked: recipesCooked ?? this.recipesCooked,
@@ -104,3 +116,6 @@ class UserProfile {
     );
   }
 }
+
+// Sentinel for nullable copyWith fields
+const _sentinel = Object();

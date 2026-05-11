@@ -19,6 +19,8 @@ class UserProvider extends ChangeNotifier {
   static const _kSkill = 'fridgenie.skill';
   static const _kCuisines = 'fridgenie.cuisines';
   static const _kMood = 'fridgenie.mood';
+  static const _kAvatarImage = 'fridgenie.avatar_image';
+  static const _kAvatarBgColor = 'fridgenie.avatar_bg_color';
 
   /// Hydrate state from SharedPreferences. Call once at app start.
   Future<void> hydrate() async {
@@ -58,12 +60,17 @@ class UserProvider extends ChangeNotifier {
             orElse: () => Mood.cozy,
           );
 
+    final avatarImage = p.getString(_kAvatarImage);
+    final avatarBgColor = p.getInt(_kAvatarBgColor);
+
     _profile = _profile.copyWith(
       name: name,
       dietary: dietary,
       skill: skill,
       favoriteCuisines: cuisines,
       defaultMood: mood,
+      avatarImagePath: avatarImage,
+      avatarBgColor: avatarBgColor,
     );
     notifyListeners();
   }
@@ -81,6 +88,34 @@ class UserProvider extends ChangeNotifier {
       _profile.favoriteCuisines.map((e) => e.name).toList(),
     );
     await p.setString(_kMood, _profile.defaultMood.name);
+    if (_profile.avatarImagePath != null) {
+      await p.setString(_kAvatarImage, _profile.avatarImagePath!);
+    } else {
+      await p.remove(_kAvatarImage);
+    }
+    if (_profile.avatarBgColor != null) {
+      await p.setInt(_kAvatarBgColor, _profile.avatarBgColor!);
+    } else {
+      await p.remove(_kAvatarBgColor);
+    }
+  }
+
+  Future<void> setAvatarImage(String path) async {
+    _profile = _profile.copyWith(avatarImagePath: path);
+    notifyListeners();
+    await _persistProfile();
+  }
+
+  Future<void> setAvatarBgColor(int colorValue) async {
+    _profile = _profile.copyWith(avatarBgColor: colorValue);
+    notifyListeners();
+    await _persistProfile();
+  }
+
+  Future<void> clearAvatarImage() async {
+    _profile = _profile.copyWith(avatarImagePath: null);
+    notifyListeners();
+    await _persistProfile();
   }
 
   // ── Onboarding state mutators ──────────────────────────────────────────
