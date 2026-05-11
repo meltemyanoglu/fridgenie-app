@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
-import '../data/models/recipe.dart';
 import '../data/services/ai_service.dart';
 import 'match_badge.dart';
 

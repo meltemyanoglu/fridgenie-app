@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
 import 'data/services/ai_service.dart';
+import 'data/services/gemini_service.dart';
 import 'data/services/ingredient_recognizer.dart';
-import 'data/services/recipe_generator.dart';
 import 'providers/fridge_provider.dart';
 import 'providers/recipe_provider.dart';
 import 'providers/user_provider.dart';
@@ -13,9 +13,7 @@ import 'routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations(
-    [DeviceOrientation.portraitUp],
-  );
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // Hydrate user prefs (onboarding flag + taste profile) before first frame.
   final userProvider = UserProvider();
@@ -34,29 +32,33 @@ class FridgenieApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<UserProvider>.value(value: userProvider),
         ChangeNotifierProvider(create: (_) => FridgeProvider()),
+
+        // Mock AI — always available, powers category/mood suggestions.
         Provider<AIService>(create: (_) => AIService()),
+
+        // Real Gemini — available when GEMINI_API_KEY is set at build time.
+        // Pass it with:  flutter run --dart-define=GEMINI_API_KEY=your_key
+        // When null the app uses mock fallback gracefully.
+        Provider<GeminiService?>(create: (_) => GeminiService.create()),
+
+        // Vision recognizer — mock by default, backend when configured.
         Provider<IngredientRecognizer>(
           create: (_) => createDefaultRecognizer(),
         ),
-        Provider<RecipeGenerator?>(
-          // Only available when a backend URL is configured. If null, the UI
-          // hides the "Generate me a new recipe" button.
-          create: (_) {
-            final backend = resolveBackendUrl();
-            if (backend.isEmpty) return null;
-            return RecipeGenerator(backendUrl: backend);
-          },
-        ),
-        ChangeNotifierProxyProvider<UserProvider, RecipeProvider>(
+
+        ChangeNotifierProxyProvider2<UserProvider, GeminiService?,
+            RecipeProvider>(
           create: (ctx) => RecipeProvider(
             aiService: ctx.read<AIService>(),
             userProvider: ctx.read<UserProvider>(),
+            geminiService: ctx.read<GeminiService?>(),
           ),
-          update: (ctx, user, prev) =>
+          update: (ctx, user, gemini, prev) =>
               prev ??
               RecipeProvider(
                 aiService: ctx.read<AIService>(),
                 userProvider: user,
+                geminiService: gemini,
               ),
         ),
       ],

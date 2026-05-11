@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/extensions.dart';
+import '../../data/services/gemini_service.dart';
 import '../../providers/fridge_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../routes.dart';
@@ -23,17 +24,43 @@ class RescueScreen extends StatefulWidget {
 
 class _RescueScreenState extends State<RescueScreen> {
   bool _ran = false;
+  bool _loading = false;
 
   Future<void> _run() async {
     final fridge = context.read<FridgeProvider>();
-    setState(() => _ran = true);
-    await context.read<RecipeProvider>().runRescue(fridge.inventoryIds);
+    final recipes = context.read<RecipeProvider>();
+    setState(() {
+      _ran = true;
+      _loading = true;
+    });
+
+    if (recipes.geminiAvailable) {
+      // Use Gemini leftover-rescue mode for a unique result.
+      final ranked = await recipes.generateWithGemini(
+        ingredientIds: fridge.inventoryIds.toList(),
+        mode: GenieMode.leftoversRescue,
+      );
+      if (mounted) {
+        setState(() => _loading = false);
+        if (ranked != null) {
+          Navigator.of(context).pushNamed(
+            AppRoutes.recipeDetail,
+            arguments: ranked,
+          );
+        }
+      }
+    } else {
+      // Fall back to mock rescue ranking.
+      await recipes.runRescue(fridge.inventoryIds);
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final fridge = context.watch<FridgeProvider>();
-    final results = context.watch<RecipeProvider>().rescueResults;
+    final recipes = context.watch<RecipeProvider>();
+    final results = recipes.rescueResults;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Leftover Rescue')),
@@ -52,10 +79,13 @@ class _RescueScreenState extends State<RescueScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Genie boosts forgiving, use-it-up recipes for what\'s already in your fridge.',
+              recipes.geminiAvailable
+                  ? 'Genie invents a rescue recipe custom-built for what\'s in your fridge.'
+                  : 'Genie boosts forgiving, use-it-up recipes for what\'s already in your fridge.',
               style: context.text.bodyMedium,
             ),
             const SizedBox(height: AppSpacing.xl),
+
             GlassCard(
               color: AppColors.tomatoSurface,
               child: Column(
@@ -65,10 +95,8 @@ class _RescueScreenState extends State<RescueScreen> {
                     children: [
                       const Text('♻️', style: TextStyle(fontSize: 22)),
                       const SizedBox(width: 8),
-                      Text(
-                        'In your fridge right now',
-                        style: context.text.titleLarge,
-                      ),
+                      Text('In your fridge right now',
+                          style: context.text.titleLarge),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -88,14 +116,23 @@ class _RescueScreenState extends State<RescueScreen> {
                 ],
               ),
             ),
+
             const SizedBox(height: AppSpacing.xl),
+
             PrimaryButton(
-              label: 'Rescue my fridge',
+              label: _loading
+                  ? 'Genie is cooking…'
+                  : recipes.geminiAvailable
+                      ? 'Rescue my fridge with AI ✨'
+                      : 'Rescue my fridge',
               icon: Icons.restart_alt_rounded,
-              onPressed: fridge.inventory.isEmpty ? null : _run,
+              loading: _loading,
+              onPressed: (fridge.inventory.isEmpty || _loading) ? null : _run,
             ),
+
             const SizedBox(height: AppSpacing.xl),
-            if (_ran) ...[
+
+            if (_ran && !_loading && !recipes.geminiAvailable) ...[
               SectionHeader(
                 title: 'Made for what you have',
                 subtitle: 'Forgiving recipes that hate waste',

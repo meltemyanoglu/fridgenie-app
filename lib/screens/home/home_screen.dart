@@ -8,8 +8,7 @@ import '../../core/utils/extensions.dart';
 import '../../data/mock/mock_ingredients.dart';
 import '../../data/models/enums.dart';
 import '../../data/services/ai_service.dart';
-import '../../data/services/ingredient_recognizer.dart' show RecognizerException;
-import '../../data/services/recipe_generator.dart';
+import '../../data/services/gemini_service.dart';
 import '../../providers/fridge_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/user_provider.dart';
@@ -28,7 +27,6 @@ import '../../widgets/streak_ring.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onOpenPantry;
-
   const HomeScreen({super.key, this.onOpenPantry});
 
   @override
@@ -53,20 +51,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _regenerate() async {
     final fridge = context.read<FridgeProvider>();
-    final recipes = context.read<RecipeProvider>();
-    await recipes.generateSuggestions(fridge.selectedIds);
+    await context.read<RecipeProvider>().generateSuggestions(fridge.selectedIds);
   }
 
+  /// Generate a new recipe with Gemini (falls back to mock when no key set).
   Future<void> _generateNewRecipe() async {
     final fridge = context.read<FridgeProvider>();
     final recipes = context.read<RecipeProvider>();
-    final user = context.read<UserProvider>();
-    final generator = context.read<RecipeGenerator?>();
 
-    if (generator == null) return;
-    if (fridge.selectedIds.isEmpty) return;
+    if (fridge.selectedIds.isEmpty) {
+      _showError('Add at least one ingredient first!');
+      return;
+    }
 
-    // Show a non-dismissible loading sheet while Gemini cooks the recipe up.
+    // Non-dismissible loading sheet while Genie cooks.
     showModalBottomSheet<void>(
       context: context,
       isDismissible: false,
@@ -75,48 +73,31 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (_) => const _GeneratingSheet(),
     );
 
-    try {
-      final recipe = await generator.generate(
-        ingredients: fridge.selectedIds.toList(),
-        dietary: user.profile.dietary,
-        mood: user.profile.defaultMood,
-        cuisine: user.profile.favoriteCuisines.isNotEmpty
-            ? user.profile.favoriteCuisines.first
-            : null,
-        skill: user.profile.skill,
-        avoidTitles: recipes.generatedRecipes
-            .map((r) => r.title)
-            .take(10)
-            .toList(),
+    final ranked = await recipes.generateWithGemini(
+      ingredientIds: fridge.selectedIds.toList(),
+      mode: GenieMode.standard,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // close loading sheet
+
+    if (ranked == null) {
+      // generateWithGemini already sets the error on the provider.
+      _showError(
+        recipes.geminiError ?? 'Something went wrong. Please try again.',
       );
-
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop(); // close loading sheet
-
-      recipes.addGeneratedRecipe(recipe);
-
-      // Wrap into a RankedRecipe (100% match — it was made for you).
-      final ranked = RankedRecipe(
-        recipe: recipe,
-        matchScore: 1.0,
-        haveIngredients: recipe.requiredIngredientIds,
-        missingIngredients: const [],
-        aiReason: recipe.whyRecommended,
-      );
-
-      Navigator.of(context).pushNamed(
-        AppRoutes.recipeDetail,
-        arguments: ranked,
-      );
-    } on RecognizerException catch (e) {
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      _showError(e.message);
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      _showError('Couldn\'t cook one up: $e');
+      return;
     }
+
+    // Show a friendly non-scary message if we fell back to demo mode.
+    if (!recipes.lastGenerationUsedGemini && recipes.geminiError != null) {
+      _showInfo(recipes.geminiError!);
+    }
+
+    Navigator.of(context).pushNamed(
+      AppRoutes.recipeDetail,
+      arguments: ranked,
+    );
   }
 
   void _showError(String message) {
@@ -126,6 +107,26 @@ class _HomeScreenState extends State<HomeScreen> {
         behavior: SnackBarBehavior.floating,
         content: Text(message,
             style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+
+  void _showInfo(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.citrusDeep,
+        behavior: SnackBarBehavior.floating,
+        content: Row(
+          children: [
+            const Text('💡 ', style: TextStyle(fontSize: 16)),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -163,10 +164,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Stack(
       children: [
-        Positioned(
+        const Positioned(
           top: -120,
           right: -80,
-          child: const AnimatedBlob(
+          child: AnimatedBlob(
             size: 260,
             colors: [AppColors.primarySurface, AppColors.background],
           ),
@@ -187,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   greeting: _greeting(),
                   name: user.profile.name,
                   streak: user.profile.currentStreak,
+                  geminiAvailable: recipes.geminiAvailable,
                   onTapStreak: () =>
                       Navigator.of(context).pushNamed(AppRoutes.badges),
                 ),
@@ -232,7 +234,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   runSpacing: 8,
                   children: visibleIngredients.map((ing) {
                     final selected = fridge.isSelected(ing.id);
-
                     return AnimatedScale(
                       scale: selected ? 1.04 : 1.0,
                       duration: const Duration(milliseconds: 180),
@@ -254,20 +255,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   Center(
                     child: TextButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _showAllIngredients = !_showAllIngredients;
-                        });
-                      },
+                      onPressed: () =>
+                          setState(() => _showAllIngredients = !_showAllIngredients),
                       icon: Icon(
                         _showAllIngredients
                             ? Icons.keyboard_arrow_up_rounded
                             : Icons.keyboard_arrow_down_rounded,
                       ),
                       label: Text(
-                        _showAllIngredients
-                            ? 'Show less'
-                            : 'Show all ingredients',
+                        _showAllIngredients ? 'Show less' : 'Show all ingredients',
                       ),
                     ),
                   ),
@@ -281,13 +277,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: _regenerate,
                 ),
 
-                if (context.read<RecipeGenerator?>() != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _CookSomethingNewCard(
-                    disabled: fridge.selectedIds.isEmpty,
-                    onTap: _generateNewRecipe,
-                  ),
-                ],
+                // "Cook something new" card — always visible.
+                // Uses Gemini when key is set; falls back to demo recipe.
+                const SizedBox(height: AppSpacing.sm),
+                _CookSomethingNewCard(
+                  disabled: fridge.selectedIds.isEmpty,
+                  geminiAvailable: recipes.geminiAvailable,
+                  loading: recipes.geminiState == RequestState.loading,
+                  onTap: _generateNewRecipe,
+                ),
 
                 const SizedBox(height: AppSpacing.lg),
 
@@ -398,10 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: 'Surprise Me',
                         subtitle: 'Roll the dice, get a chef-picked dinner.',
                         emoji: '🎲',
-                        gradient: const [
-                          AppColors.citrus,
-                          AppColors.citrusDeep,
-                        ],
+                        gradient: const [AppColors.citrus, AppColors.citrusDeep],
                         onTap: () =>
                             Navigator.of(context).pushNamed(AppRoutes.surprise),
                       ),
@@ -410,22 +405,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: '3-Ingredient Challenge',
                         subtitle: 'Lock 3 items, cook from constraint.',
                         emoji: '🏆',
-                        gradient: const [
-                          Color(0xFF8AD49C),
-                          AppColors.primary,
-                        ],
-                        onTap: () => Navigator.of(context)
-                            .pushNamed(AppRoutes.challenge),
+                        gradient: const [Color(0xFF8AD49C), AppColors.primary],
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.challenge),
                       ),
                       const SizedBox(width: 12),
                       ModeCard(
                         title: 'Leftover Rescue',
                         subtitle: 'Save what\'s wilting, make it delicious.',
                         emoji: '♻️',
-                        gradient: const [
-                          AppColors.moodCozy,
-                          AppColors.tomato,
-                        ],
+                        gradient: const [AppColors.moodCozy, AppColors.tomato],
                         onTap: () =>
                             Navigator.of(context).pushNamed(AppRoutes.rescue),
                       ),
@@ -443,15 +432,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 12),
                       ModeCard(
-                        title: 'Swipe to discover',
-                        subtitle: 'Tinder-style recipe discovery.',
-                        emoji: '💚',
+                        title: 'Healthy & Quick',
+                        subtitle: 'Under 20 min, high protein, full of life.',
+                        emoji: '⚡️',
                         gradient: const [
-                          AppColors.moodCalm,
-                          AppColors.info,
+                          AppColors.primaryLight,
+                          AppColors.citrus,
                         ],
-                        onTap: () => Navigator.of(context)
-                            .pushNamed(AppRoutes.swipeDeck),
+                        onTap: () => _launchHealthyQuick(fridge.selectedIds),
                       ),
                     ],
                   ),
@@ -541,18 +529,53 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+
+  Future<void> _launchHealthyQuick(Set<String> ingredientIds) async {
+    final recipes = context.read<RecipeProvider>();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _GeneratingSheet(),
+    );
+
+    final ranked = await recipes.generateWithGemini(
+      ingredientIds: ingredientIds.toList(),
+      mode: GenieMode.healthyQuick,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (ranked == null) {
+      _showError('Couldn\'t generate a healthy recipe. Try again!');
+      return;
+    }
+
+    if (!recipes.lastGenerationUsedGemini && recipes.geminiError != null) {
+      _showInfo(recipes.geminiError!);
+    }
+
+    Navigator.of(context).pushNamed(AppRoutes.recipeDetail, arguments: ranked);
+  }
 }
+
+// ── Sub-widgets ────────────────────────────────────────────────────────────
 
 class _ChefHeader extends StatelessWidget {
   final String greeting;
   final String name;
   final int streak;
+  final bool geminiAvailable;
   final VoidCallback onTapStreak;
 
   const _ChefHeader({
     required this.greeting,
     required this.name,
     required this.streak,
+    required this.geminiAvailable,
     required this.onTapStreak,
   });
 
@@ -619,31 +642,73 @@ class _ChefHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onTapStreak,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primarySurface,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-                border: Border.all(color: AppColors.outline),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🔥', style: TextStyle(fontSize: 15)),
-                  const SizedBox(width: 5),
-                  Text(
-                    '$streak',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13,
-                      color: AppColors.primaryDark,
-                    ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              GestureDetector(
+                onTap: onTapStreak,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySurface,
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusPill),
+                    border: Border.all(color: AppColors.outline),
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🔥', style: TextStyle(fontSize: 15)),
+                      const SizedBox(width: 5),
+                      Text(
+                        '$streak',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 4),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: geminiAvailable
+                      ? AppColors.primarySurface
+                      : AppColors.surfaceMuted,
+                  borderRadius:
+                      BorderRadius.circular(AppSpacing.radiusPill),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 10,
+                      color: geminiAvailable
+                          ? AppColors.primaryDark
+                          : AppColors.textTertiary,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      geminiAvailable ? 'AI on' : 'Demo',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: geminiAvailable
+                            ? AppColors.primaryDark
+                            : AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -655,10 +720,7 @@ class _HeroCard extends StatelessWidget {
   final int selectedCount;
   final VoidCallback? onTapPantry;
 
-  const _HeroCard({
-    required this.selectedCount,
-    this.onTapPantry,
-  });
+  const _HeroCard({required this.selectedCount, this.onTapPantry});
 
   @override
   Widget build(BuildContext context) {
@@ -707,9 +769,7 @@ class _HeroCard extends StatelessWidget {
             selectedCount == 0
                 ? 'Tap a few ingredients below — I\'ll dream up dinners that match.'
                 : 'I see $selectedCount ingredients — pulling matches now.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.35,
-                ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
           ),
           const SizedBox(height: 12),
           Row(
@@ -742,11 +802,7 @@ class _MiniAction extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
 
-  const _MiniAction({
-    required this.icon,
-    required this.label,
-    this.onTap,
-  });
+  const _MiniAction({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -807,15 +863,12 @@ class _AnimatedGenerateButtonState extends State<_AnimatedGenerateButton>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-
-    _scale = Tween<double>(begin: 1.0, end: 1.025).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(begin: 1.0, end: 1.025)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -827,15 +880,12 @@ class _AnimatedGenerateButtonState extends State<_AnimatedGenerateButton>
   @override
   Widget build(BuildContext context) {
     final shouldAnimate = !widget.disabled && !widget.loading;
-
     return AnimatedBuilder(
       animation: _scale,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: shouldAnimate ? _scale.value : 1.0,
-          child: child,
-        );
-      },
+      builder: (context, child) => Transform.scale(
+        scale: shouldAnimate ? _scale.value : 1.0,
+        child: child,
+      ),
       child: PrimaryButton(
         label: widget.loading ? 'Creating ideas...' : 'Generate meal ideas',
         icon: Icons.auto_awesome_rounded,
@@ -861,15 +911,12 @@ class _AnimatedChefEmojiState extends State<_AnimatedChefEmoji>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1300),
     )..repeat(reverse: true);
-
-    _float = Tween<double>(begin: -2, end: 2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _float = Tween<double>(begin: -2, end: 2)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -882,16 +929,9 @@ class _AnimatedChefEmojiState extends State<_AnimatedChefEmoji>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _float,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _float.value),
-          child: child,
-        );
-      },
-      child: const Text(
-        '👩‍🍳',
-        style: TextStyle(fontSize: 40),
-      ),
+      builder: (context, child) =>
+          Transform.translate(offset: Offset(0, _float.value), child: child),
+      child: const Text('👩‍🍳', style: TextStyle(fontSize: 40)),
     );
   }
 }
@@ -921,15 +961,18 @@ class _SuggestionsLoading extends StatelessWidget {
   }
 }
 
-/// Sub-CTA shown right under the main "Generate meal ideas" button. Asks
-/// Gemini to invent something new from the user's fridge instead of matching
-/// a fixed catalog.
+/// Genie card that invents a brand-new recipe. Always shown — uses Gemini
+/// when available, gracefully falls back to a demo recipe otherwise.
 class _CookSomethingNewCard extends StatelessWidget {
   final bool disabled;
+  final bool geminiAvailable;
+  final bool loading;
   final VoidCallback onTap;
 
   const _CookSomethingNewCard({
     required this.disabled,
+    required this.geminiAvailable,
+    required this.loading,
     required this.onTap,
   });
 
@@ -938,7 +981,7 @@ class _CookSomethingNewCard extends StatelessWidget {
     return Opacity(
       opacity: disabled ? 0.5 : 1.0,
       child: GestureDetector(
-        onTap: disabled ? null : onTap,
+        onTap: (disabled || loading) ? null : onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
@@ -962,25 +1005,38 @@ class _CookSomethingNewCard extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('🧞', style: TextStyle(fontSize: 22)),
+                child: loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.citrusDeep,
+                        ),
+                      )
+                    : const Text('🧞', style: TextStyle(fontSize: 22)),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Cook something new',
-                      style: TextStyle(
+                      geminiAvailable
+                          ? 'Cook something new with AI'
+                          : 'Cook something new',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 14.5,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
-                      'Let Genie invent a recipe from what you have',
-                      style: TextStyle(
+                      geminiAvailable
+                          ? 'Genie invents a unique recipe from what you have'
+                          : 'Genie picks a great match from your ingredients',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
@@ -1000,8 +1056,8 @@ class _CookSomethingNewCard extends StatelessWidget {
   }
 }
 
-/// Bottom-sheet shown while Gemini is generating. Plays a small spinner +
-/// rotating "thinking" copy to make a 5-15 sec wait feel intentional.
+/// Bottom sheet shown while Genie is cooking. Cycles through friendly copy
+/// so the wait feels intentional.
 class _GeneratingSheet extends StatefulWidget {
   const _GeneratingSheet();
 
@@ -1013,7 +1069,7 @@ class _GeneratingSheetState extends State<_GeneratingSheet> {
   static const _lines = [
     'Looking at what you have…',
     'Thinking about flavors…',
-    'Picking a method…',
+    'Picking the right technique…',
     'Writing the steps…',
     'Plating it up…',
   ];
@@ -1047,57 +1103,50 @@ class _GeneratingSheetState extends State<_GeneratingSheet> {
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.only(bottom: 22),
             decoration: BoxDecoration(
               color: AppColors.outline,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
+          const SizedBox(height: 24),
           Container(
             width: 76,
             height: 76,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               gradient: AppColors.sunsetGradient,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.citrusDeep.withValues(alpha: 0.4),
-                  blurRadius: 26,
-                  offset: const Offset(0, 14),
+                  color: AppColors.citrusDeep.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
-            child: const Text('🧞', style: TextStyle(fontSize: 42)),
+            child: const Text('🧞', style: TextStyle(fontSize: 44)),
           ),
           const SizedBox(height: 18),
           Text(
             'Genie is cooking…',
-            style: AppTypography.wordmark.copyWith(
-              fontSize: 22,
-              color: AppColors.primaryDark,
-            ),
+            style: AppTypography.wordmark.copyWith(fontSize: 22),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           AnimatedSwitcher(
-            duration: const Duration(milliseconds: 320),
+            duration: const Duration(milliseconds: 400),
             child: Text(
               _lines[_idx],
               key: ValueKey(_idx),
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
             ),
           ),
-          const SizedBox(height: 14),
-          const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.4,
-              color: AppColors.primary,
-            ),
+          const SizedBox(height: 24),
+          const LinearProgressIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.surfaceMuted,
           ),
         ],
       ),
