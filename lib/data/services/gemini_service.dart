@@ -171,7 +171,7 @@ class GeminiService {
         'responseMimeType': 'application/json',
         'temperature': 0.82,
         'topP': 0.95,
-        'maxOutputTokens': 2048,
+        'maxOutputTokens': 8192,
       },
     });
 
@@ -200,7 +200,13 @@ class GeminiService {
       throw const GeminiException('Gemini returned no candidates.');
     }
 
-    final content = candidates.first['content'] as Map<String, dynamic>?;
+    final candidate = candidates.first as Map<String, dynamic>;
+    final finishReason = candidate['finishReason'] as String?;
+    if (finishReason == 'MAX_TOKENS') {
+      throw const GeminiException('Response was cut off — try again.');
+    }
+
+    final content = candidate['content'] as Map<String, dynamic>?;
     final parts = content?['parts'] as List<dynamic>?;
     if (parts == null || parts.isEmpty) {
       throw const GeminiException('Gemini returned empty content.');
