@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
 import '../../data/mock/mock_recipes.dart';
 import '../../providers/recipe_provider.dart';
@@ -12,7 +11,6 @@ import '../../routes.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/recipe_card.dart';
 import '../../widgets/section_header.dart';
-import '../../widgets/streak_ring.dart';
 import '../../data/services/ai_service.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -103,44 +101,30 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
 
           // Streak + stats
-          GlassCard(
-            color: AppColors.primarySurface,
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primarySurface,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+            ),
             child: Row(
               children: [
-                StreakRing(
-                  days: user.profile.currentStreak,
-                  target: 7,
-                  size: 130,
+                _StatColumn(
+                  emoji: '🔥',
+                  value: '${user.profile.currentStreak}',
+                  label: 'day streak',
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Lifetime',
-                          style: AppTypography.wordmark.copyWith(
-                            fontSize: 22,
-                            color: AppColors.primaryDark,
-                          )),
-                      const SizedBox(height: 8),
-                      _Stat(
-                        emoji: '🍳',
-                        label: 'Recipes cooked',
-                        value: '${user.profile.recipesCooked}',
-                      ),
-                      _Stat(
-                        emoji: '🏆',
-                        label: 'Longest streak',
-                        value: '${user.profile.longestStreak} days',
-                      ),
-                      _Stat(
-                        emoji: '♻️',
-                        label: 'Waste saved',
-                        value:
-                            '${(user.profile.wasteSavedGrams / 1000).toStringAsFixed(1)} kg',
-                      ),
-                    ],
-                  ),
+                _VerticalDivider(),
+                _StatColumn(
+                  emoji: '🍳',
+                  value: '${user.profile.recipesCooked}',
+                  label: 'recipes cooked',
+                ),
+                _VerticalDivider(),
+                _StatColumn(
+                  emoji: '♻️',
+                  value: '${(user.profile.wasteSavedGrams / 1000).toStringAsFixed(1)} kg',
+                  label: 'waste saved',
                 ),
               ],
             ),
@@ -321,44 +305,51 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _Stat extends StatelessWidget {
+class _StatColumn extends StatelessWidget {
   final String emoji;
-  final String label;
   final String value;
-  const _Stat({
-    required this.emoji,
-    required this.label,
-    required this.value,
-  });
+  final String label;
+  const _StatColumn({required this.emoji, required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(height: 6),
           Text(
             value,
             style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
               color: AppColors.primaryDark,
-              fontWeight: FontWeight.w800,
-              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _VerticalDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 48,
+      color: AppColors.primary.withValues(alpha: 0.15),
     );
   }
 }

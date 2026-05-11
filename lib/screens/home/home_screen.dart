@@ -613,72 +613,65 @@ class _ChefHeader extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              // Streak pill
               GestureDetector(
                 onTap: onTapStreak,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primarySurface,
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusPill),
-                    border: Border.all(color: AppColors.outline),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+                    border: Border.all(color: AppColors.outline, width: 1.2),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('🔥', style: TextStyle(fontSize: 15)),
-                      const SizedBox(width: 5),
+                      const Text('🔥', style: TextStyle(fontSize: 13)),
+                      const SizedBox(width: 4),
                       Text(
                         '$streak',
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 13,
-                          color: AppColors.primaryDark,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: geminiAvailable
-                      ? AppColors.primarySurface
-                      : AppColors.surfaceMuted,
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.radiusPill),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.auto_awesome_rounded,
-                      size: 10,
+              const SizedBox(height: 6),
+              // AI status dot
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: geminiAvailable
+                          ? AppColors.primary
+                          : AppColors.textTertiary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    geminiAvailable ? 'AI on' : 'Demo',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
                       color: geminiAvailable
                           ? AppColors.primaryDark
                           : AppColors.textTertiary,
                     ),
-                    const SizedBox(width: 3),
-                    Text(
-                      geminiAvailable ? 'AI on' : 'Demo',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w800,
-                        color: geminiAvailable
-                            ? AppColors.primaryDark
-                            : AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
