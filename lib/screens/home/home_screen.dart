@@ -834,62 +834,6 @@ class _MiniAction extends StatelessWidget {
   }
 }
 
-class _AnimatedGenerateButton extends StatefulWidget {
-  final bool loading;
-  final bool disabled;
-  final VoidCallback onPressed;
-
-  const _AnimatedGenerateButton({
-    required this.loading,
-    required this.disabled,
-    required this.onPressed,
-  });
-
-  @override
-  State<_AnimatedGenerateButton> createState() =>
-      _AnimatedGenerateButtonState();
-}
-
-class _AnimatedGenerateButtonState extends State<_AnimatedGenerateButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-    _scale = Tween<double>(begin: 1.0, end: 1.025)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final shouldAnimate = !widget.disabled && !widget.loading;
-    return AnimatedBuilder(
-      animation: _scale,
-      builder: (context, child) => Transform.scale(
-        scale: shouldAnimate ? _scale.value : 1.0,
-        child: child,
-      ),
-      child: PrimaryButton(
-        label: widget.loading ? 'Creating ideas...' : 'Generate meal ideas',
-        icon: Icons.auto_awesome_rounded,
-        loading: widget.loading,
-        onPressed: widget.disabled ? null : widget.onPressed,
-      ),
-    );
-  }
-}
 
 class _AnimatedChefEmoji extends StatefulWidget {
   const _AnimatedChefEmoji();
@@ -956,93 +900,111 @@ class _SuggestionsLoading extends StatelessWidget {
   }
 }
 
-/// Genie card that invents a brand-new recipe. Always shown — uses Gemini
-/// when available, gracefully falls back to a demo recipe otherwise.
-class _CookSomethingNewCard extends StatelessWidget {
-  final bool disabled;
+/// Single smart CTA — uses Gemini when available, mock refresh otherwise.
+class _SmartGenerateButton extends StatelessWidget {
   final bool geminiAvailable;
   final bool loading;
-  final VoidCallback onTap;
+  final bool disabled;
+  final VoidCallback onPressed;
 
-  const _CookSomethingNewCard({
-    required this.disabled,
+  const _SmartGenerateButton({
     required this.geminiAvailable,
     required this.loading,
-    required this.onTap,
+    required this.disabled,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
+    String label;
+    if (loading) {
+      label = geminiAvailable ? 'Genie is cooking…' : 'Finding ideas…';
+    } else {
+      label = geminiAvailable ? 'Cook with AI 🧞' : 'Generate meal ideas';
+    }
+
+    return geminiAvailable
+        ? _GradientButton(
+            label: label,
+            loading: loading,
+            disabled: disabled,
+            onPressed: onPressed,
+          )
+        : PrimaryButton(
+            label: label,
+            icon: Icons.auto_awesome_rounded,
+            loading: loading,
+            onPressed: disabled ? null : onPressed,
+          );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  final String label;
+  final bool loading;
+  final bool disabled;
+  final VoidCallback onPressed;
+
+  const _GradientButton({
+    required this.label,
+    required this.loading,
+    required this.disabled,
+    required this.onPressed,
+  });
+
+  static const _gradient = LinearGradient(
+    colors: [Color(0xFF6C5CE7), Color(0xFFA855F7)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
+  @override
+  Widget build(BuildContext context) {
     return Opacity(
-      opacity: disabled ? 0.5 : 1.0,
+      opacity: disabled ? 0.45 : 1.0,
       child: GestureDetector(
-        onTap: (disabled || loading) ? null : onTap,
+        onTap: (disabled || loading) ? null : onPressed,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            gradient: AppColors.sunsetGradient,
+            gradient: _gradient,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.citrusDeep.withValues(alpha: 0.25),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: AppColors.citrusDeep,
-                        ),
-                      )
-                    : const Text('🧞', style: TextStyle(fontSize: 22)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      geminiAvailable
-                          ? 'Cook something new with AI'
-                          : 'Cook something new',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14.5,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      geminiAvailable
-                          ? 'Genie invents a unique recipe from what you have'
-                          : 'Genie picks a great match from your ingredients',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
+            boxShadow: disabled
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
                     ),
                   ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (loading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              else
+                const Icon(Icons.auto_awesome_rounded,
+                    color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  letterSpacing: 0.3,
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.auto_awesome_rounded,
-                  color: Colors.white, size: 18),
             ],
           ),
         ),
@@ -1109,11 +1071,15 @@ class _GeneratingSheetState extends State<_GeneratingSheet> {
             height: 76,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              gradient: AppColors.sunsetGradient,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6C5CE7), Color(0xFFA855F7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.citrusDeep.withValues(alpha: 0.3),
+                  color: const Color(0xFF6C5CE7).withValues(alpha: 0.35),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
