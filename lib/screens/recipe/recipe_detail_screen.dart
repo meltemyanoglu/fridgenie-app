@@ -7,6 +7,7 @@ import '../../core/utils/extensions.dart';
 import '../../data/mock/mock_ingredients.dart';
 import '../../data/services/ai_service.dart';
 import '../../providers/fridge_provider.dart';
+import '../../providers/grocery_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/glass_card.dart';
@@ -540,6 +541,7 @@ class _IngredientList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final grocery = context.read<GroceryProvider>();
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -552,36 +554,51 @@ class _IngredientList extends StatelessWidget {
         final bg = optional
             ? AppColors.surface
             : (has ? AppColors.primarySurface : AppColors.tomatoSurface);
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-            border: Border.all(color: AppColors.outline),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(ing?.emoji ?? '🍴',
-                  style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 6),
-              Text(
-                ing?.name ?? id,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: fg,
-                ),
-              ),
-              if (!optional) ...[
+
+        return GestureDetector(
+          onTap: (!optional && !has)
+              ? () {
+                  grocery.addItem(ing?.name ?? id, ing?.emoji ?? '🛒');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          '${ing?.emoji ?? '🛒'} ${ing?.name ?? id} added to grocery list'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+              border: Border.all(color: AppColors.outline),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(ing?.emoji ?? '🍴',
+                    style: const TextStyle(fontSize: 16)),
                 const SizedBox(width: 6),
-                Icon(
-                  has ? Icons.check_rounded : Icons.add_shopping_cart_rounded,
-                  size: 14,
-                  color: fg,
+                Text(
+                  ing?.name ?? id,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
                 ),
+                if (!optional) ...[
+                  const SizedBox(width: 6),
+                  Icon(
+                    has ? Icons.check_rounded : Icons.add_shopping_cart_rounded,
+                    size: 14,
+                    color: fg,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       }).toList(),

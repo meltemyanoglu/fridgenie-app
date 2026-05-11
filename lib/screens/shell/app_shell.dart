@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../discover/suggestions_screen.dart';
+import '../grocery/grocery_screen.dart';
 import '../home/home_screen.dart';
 import '../pantry/pantry_screen.dart';
 import '../profile/profile_screen.dart';
@@ -27,13 +27,14 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final tabs = <_NavItem>[
       const _NavItem(icon: Icons.home_rounded, label: 'Home'),
-      const _NavItem(icon: Icons.explore_rounded, label: 'Discover'),
       const _NavItem(icon: Icons.kitchen_rounded, label: 'Fridge'),
+      const _NavItem(icon: Icons.shopping_cart_outlined, label: 'List'),
       const _NavItem(icon: Icons.person_rounded, label: 'Profile'),
     ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: true,
       // Listens to vertical scroll direction across child screens and
       // hides the bottom navigation bar when scrolling down,
       // shows it again when scrolling up to maximize content space.
@@ -54,9 +55,9 @@ class _AppShellState extends State<AppShell> {
             IndexedStack(
               index: _index,
               children: [
-                HomeScreen(onOpenPantry: () => setState(() => _index = 2)),
-                const SuggestionsScreen(),
+                HomeScreen(onOpenPantry: () => setState(() => _index = 1)),
                 const PantryScreen(),
+                const GroceryScreen(),
                 const ProfileScreen(),
               ],
             ),

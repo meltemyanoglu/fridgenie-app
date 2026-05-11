@@ -7,6 +7,7 @@ import 'data/services/ai_service.dart';
 import 'data/services/gemini_service.dart';
 import 'data/services/ingredient_recognizer.dart';
 import 'providers/fridge_provider.dart';
+import 'providers/grocery_provider.dart';
 import 'providers/recipe_provider.dart';
 import 'providers/user_provider.dart';
 import 'routes.dart';
@@ -32,6 +33,7 @@ class FridgenieApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<UserProvider>.value(value: userProvider),
         ChangeNotifierProvider(create: (_) => FridgeProvider()),
+        ChangeNotifierProvider(create: (_) => GroceryProvider()),
 
         // Mock AI — always available, powers category/mood suggestions.
         Provider<AIService>(create: (_) => AIService()),
