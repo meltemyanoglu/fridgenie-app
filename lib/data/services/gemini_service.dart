@@ -27,8 +27,7 @@ enum GenieMode {
 /// When [isAvailable] is false (no key configured), every method falls back
 /// gracefully to mock data so the UI never breaks.
 class GeminiService {
-  // gemini-2.0-flash-lite is the free-tier model; 2.0-flash requires billing.
-  static const _model = 'gemini-2.0-flash-lite';
+  static const _model = 'gemini-2.5-flash';
   static const _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent';
 
