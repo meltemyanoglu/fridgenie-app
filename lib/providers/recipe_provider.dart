@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -208,18 +210,44 @@ class RecipeProvider extends ChangeNotifier {
   bool isFavorite(String id) => _favorites.contains(id);
   Set<String> get favorites => Set.unmodifiable(_favorites);
 
+  SharedPreferences? _prefs;
+
   static const _kFavoritesKey = 'fridgenie.favorites';
+  static const _kGeneratedKey = 'fridgenie.generated_recipes';
+  static const _kMaxGenerated = 50;
 
   Future<void> _loadFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList(_kFavoritesKey) ?? [];
+    _prefs = await SharedPreferences.getInstance();
+    final saved = _prefs!.getStringList(_kFavoritesKey) ?? [];
     _favorites.addAll(saved);
+    _loadGeneratedRecipesFromPrefs();
     notifyListeners();
   }
 
-  Future<void> _saveFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_kFavoritesKey, _favorites.toList());
+  void _loadGeneratedRecipesFromPrefs() {
+    final raw = _prefs?.getString(_kGeneratedKey);
+    if (raw == null) return;
+    try {
+      final list = jsonDecode(raw) as List;
+      _generatedRecipes.clear();
+      for (final item in list) {
+        _generatedRecipes.add(Recipe.fromJson(item as Map<String, dynamic>));
+      }
+    } catch (_) {
+      // Corrupt data — start fresh
+    }
+  }
+
+  void _saveFavorites() {
+    _prefs?.setStringList(_kFavoritesKey, _favorites.toList());
+  }
+
+  void _saveGeneratedRecipes() {
+    final toSave = _generatedRecipes.take(_kMaxGenerated).toList();
+    _prefs?.setString(
+      _kGeneratedKey,
+      jsonEncode(toSave.map((r) => r.toJson()).toList()),
+    );
   }
 
   Future<void> toggleFavorite(String id) async {
@@ -229,12 +257,10 @@ class RecipeProvider extends ChangeNotifier {
       _favorites.add(id);
     }
     notifyListeners();
-    await _saveFavorites();
+    _saveFavorites();
   }
 
   // ── Generated recipes (Gemini / mock) ──────────────────────────────────
-  // Recipes invented this session — held in memory. Favorites are persisted
-  // by id; the full recipe object lives here for lookups.
   final List<Recipe> _generatedRecipes = [];
   List<Recipe> get generatedRecipes => List.unmodifiable(_generatedRecipes);
 
@@ -247,6 +273,7 @@ class RecipeProvider extends ChangeNotifier {
 
   void addGeneratedRecipe(Recipe recipe) {
     _generatedRecipes.insert(0, recipe);
+    _saveGeneratedRecipes();
     notifyListeners();
   }
 
