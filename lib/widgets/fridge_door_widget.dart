@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
@@ -39,6 +42,7 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
 
   // Placed magnets: key → normalized position (0–1) on the fridge area
   final Map<String, Offset> _placements = {};
+  static const _kPlacementsKey = 'fridge_magnet_placements';
 
   // All magnets available in the tray
   static const _trayMagnets = [
@@ -92,6 +96,29 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
       duration: const Duration(milliseconds: 500),
     );
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOutCubic);
+    _loadPlacements();
+  }
+
+  Future<void> _loadPlacements() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kPlacementsKey);
+    if (raw == null) return;
+    final map = jsonDecode(raw) as Map<String, dynamic>;
+    if (!mounted) return;
+    setState(() {
+      _placements.clear();
+      map.forEach((key, val) {
+        final list = val as List;
+        _placements[key] = Offset((list[0] as num).toDouble(), (list[1] as num).toDouble());
+      });
+    });
+  }
+
+  Future<void> _savePlacements() async {
+    final prefs = await SharedPreferences.getInstance();
+    final map = <String, List<double>>{};
+    _placements.forEach((key, offset) => map[key] = [offset.dx, offset.dy]);
+    await prefs.setString(_kPlacementsKey, jsonEncode(map));
   }
 
   @override
@@ -114,12 +141,16 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
         _placements[key] = _defaultPositions[idx];
       }
     });
+    _savePlacements();
   }
 
   void _moveMagnet(String key, double dx, double dy) {
     // Mutates map synchronously so subsequent pan deltas read fresh value
     setState(() => _placements[key] = Offset(dx, dy));
+    // Save is called from onDragEnd to avoid writing on every frame
   }
+
+  void _onDragEnd() => _savePlacements();
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +195,7 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
                           allMagnets: _trayMagnets,
                           placements: _placements,
                           onMoveMagnet: _moveMagnet,
+                          onDragEnd: _onDragEnd,
                           doorWidth: w,
                           onTapHandle: _toggle,
                         ),
@@ -195,6 +227,7 @@ class _FridgeDoor extends StatelessWidget {
   final List<MagnetItem> allMagnets;
   final Map<String, Offset> placements;
   final void Function(String key, double dx, double dy) onMoveMagnet;
+  final VoidCallback onDragEnd;
   final double doorWidth;
   final VoidCallback onTapHandle;
 
@@ -202,6 +235,7 @@ class _FridgeDoor extends StatelessWidget {
     required this.allMagnets,
     required this.placements,
     required this.onMoveMagnet,
+    required this.onDragEnd,
     required this.doorWidth,
     required this.onTapHandle,
   });
@@ -325,6 +359,7 @@ class _FridgeDoor extends StatelessWidget {
                     final dy = (cur.dy + details.delta.dy / (_totalH - _magnetSize)).clamp(0.0, 1.0);
                     onMoveMagnet(entry.key, dx, dy);
                   },
+                  onPanEnd: (_) => onDragEnd(),
                   child: _MagnetWidget(emoji: magnet.emoji, imagePath: magnet.imagePath),
                 ),
               );
