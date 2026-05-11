@@ -63,19 +63,24 @@ class _BadgeRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              gradient: badge.earned ? AppColors.leafGradient : null,
-              color: badge.earned ? null : AppColors.outline,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            ),
-            child: Opacity(
-              opacity: badge.earned ? 1.0 : 0.6,
-              child:
-                  Text(badge.emoji, style: const TextStyle(fontSize: 28)),
+          Opacity(
+            opacity: badge.earned ? 1.0 : 0.4,
+            child: Image.asset(
+              badge.assetPath,
+              width: 64,
+              height: 64,
+              errorBuilder: (_, __, ___) => Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: badge.earned ? AppColors.leafGradient : null,
+                  color: badge.earned ? null : AppColors.outline,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: Text(badge.emoji,
+                    style: const TextStyle(fontSize: 32)),
+              ),
             ),
           ),
           const SizedBox(width: 14),

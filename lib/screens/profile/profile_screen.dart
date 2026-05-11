@@ -370,48 +370,57 @@ class _BadgeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final earned = badge.earned as bool;
-    return Container(
-      width: 110,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: earned ? AppColors.surface : AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(
-          color: earned ? AppColors.primary : AppColors.outline,
-          width: 1.4,
+    final assetPath = badge.assetPath as String;
+    final emoji = badge.emoji as String;
+
+    return Opacity(
+      opacity: earned ? 1.0 : 0.45,
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+        decoration: BoxDecoration(
+          color: earned ? AppColors.surface : AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(
+            color: earned ? AppColors.primary : AppColors.outline,
+            width: earned ? 1.8 : 1.0,
+          ),
+          boxShadow: earned
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Opacity(
-            opacity: earned ? 1.0 : 0.5,
-            child: Text(badge.emoji as String,
-                style: const TextStyle(fontSize: 26)),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            badge.name as String,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-              color: earned ? AppColors.textPrimary : AppColors.textSecondary,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // PNG badge image, falls back to emoji if asset missing
+            Image.asset(
+              assetPath,
+              width: 56,
+              height: 56,
+              errorBuilder: (_, __, ___) =>
+                  Text(emoji, style: const TextStyle(fontSize: 40)),
             ),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: (badge.progress as int) / 100,
-              minHeight: 4,
-              backgroundColor: AppColors.outline,
-              valueColor: AlwaysStoppedAnimation(
-                  earned ? AppColors.primary : AppColors.citrusDeep),
+            const SizedBox(height: 8),
+            Text(
+              badge.name as String,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                color:
+                    earned ? AppColors.textPrimary : AppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

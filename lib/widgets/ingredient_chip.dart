@@ -30,8 +30,8 @@ class IngredientChip extends StatelessWidget {
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 10 : 12,
-        vertical: compact ? 6 : 8,
+        horizontal: compact ? 8 : 12,
+        vertical: compact ? 5 : 8,
       ),
       decoration: BoxDecoration(
         color: bg,
@@ -57,15 +57,15 @@ class IngredientChip extends StatelessWidget {
             children: [
               Text(
                 ingredient.emoji,
-                style: const TextStyle(fontSize: 16), // küçüldü
+                style: TextStyle(fontSize: compact ? 13 : 16),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
               Text(
                 ingredient.name,
                 style: TextStyle(
                   color: fg,
                   fontWeight: FontWeight.w600,
-                  fontSize: compact ? 12 : 13, // küçüldü
+                  fontSize: compact ? 11 : 13,
                 ),
               ),
               if (onRemove != null) ...[

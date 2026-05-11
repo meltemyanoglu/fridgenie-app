@@ -230,8 +230,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: AppSpacing.sm),
 
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 6,
+                  runSpacing: 6,
                   children: visibleIngredients.map((ing) {
                     final selected = fridge.isSelected(ing.id);
                     return AnimatedScale(
