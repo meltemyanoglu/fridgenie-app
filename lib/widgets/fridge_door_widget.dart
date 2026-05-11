@@ -36,7 +36,7 @@ class FridgeDoorWidget extends StatefulWidget {
 }
 
 class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
   bool _isDoorOpen = false;
@@ -44,6 +44,7 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
   // Placed magnets: key → normalized position (0–1) on the fridge area
   final Map<String, Offset> _placements = {};
   static const _kPlacementsKey = 'fridge_magnet_placements';
+  SharedPreferences? _prefs; // cached after first load
 
   // All magnets available in the tray
   static const _large = 88.0;
@@ -95,6 +96,7 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -103,9 +105,19 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
     _loadPlacements();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Save whenever app goes to background or is about to be killed
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _savePlacements();
+    }
+  }
+
   Future<void> _loadPlacements() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_kPlacementsKey);
+    _prefs = await SharedPreferences.getInstance();
+    final raw = _prefs!.getString(_kPlacementsKey);
     if (raw == null) return;
     final map = jsonDecode(raw) as Map<String, dynamic>;
     if (!mounted) return;
@@ -113,20 +125,26 @@ class _FridgeDoorWidgetState extends State<FridgeDoorWidget>
       _placements.clear();
       map.forEach((key, val) {
         final list = val as List;
-        _placements[key] = Offset((list[0] as num).toDouble(), (list[1] as num).toDouble());
+        _placements[key] = Offset(
+          (list[0] as num).toDouble(),
+          (list[1] as num).toDouble(),
+        );
       });
     });
   }
 
-  Future<void> _savePlacements() async {
-    final prefs = await SharedPreferences.getInstance();
+  void _savePlacements() {
+    // Writes to in-memory cache synchronously, persists to disk async
+    final prefs = _prefs;
+    if (prefs == null) return;
     final map = <String, List<double>>{};
-    _placements.forEach((key, offset) => map[key] = [offset.dx, offset.dy]);
-    await prefs.setString(_kPlacementsKey, jsonEncode(map));
+    _placements.forEach((key, o) => map[key] = [o.dx, o.dy]);
+    prefs.setString(_kPlacementsKey, jsonEncode(map));
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ctrl.dispose();
     super.dispose();
   }

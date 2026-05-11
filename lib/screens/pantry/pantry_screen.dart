@@ -62,42 +62,6 @@ class _PantryScreenState extends State<PantryScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
 
-          // Search
-          TextField(
-            onChanged: (v) => setState(() => _query = v),
-            decoration: const InputDecoration(
-              hintText: 'Search ingredients…',
-              prefixIcon: Icon(Icons.search_rounded),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Category filter
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _CatChip(
-                  label: 'All',
-                  emoji: '🧺',
-                  selected: _filter == null,
-                  onTap: () => setState(() => _filter = null),
-                ),
-                for (final c in IngredientCategory.values) ...[
-                  const SizedBox(width: 8),
-                  _CatChip(
-                    label: c.label,
-                    emoji: c.emoji,
-                    selected: _filter == c,
-                    onTap: () => setState(() => _filter = c),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
           // In-pantry section
           if (fridge.inventory.isNotEmpty) ...[
             SectionHeader(
@@ -120,6 +84,40 @@ class _PantryScreenState extends State<PantryScreen> {
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
+
+          // Search
+          TextField(
+            onChanged: (v) => setState(() => _query = v),
+            decoration: const InputDecoration(
+              hintText: 'Search ingredients…',
+              prefixIcon: Icon(Icons.search_rounded),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Category filter
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _CatChip(
+                  label: 'All',
+                  selected: _filter == null,
+                  onTap: () => setState(() => _filter = null),
+                ),
+                for (final c in IngredientCategory.values) ...[
+                  const SizedBox(width: 8),
+                  _CatChip(
+                    label: c.label,
+                    selected: _filter == c,
+                    onTap: () => setState(() => _filter = c),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
 
           // Catalog
           SectionHeader(
@@ -146,12 +144,10 @@ class _PantryScreenState extends State<PantryScreen> {
 
 class _CatChip extends StatelessWidget {
   final String label;
-  final String emoji;
   final bool selected;
   final VoidCallback onTap;
   const _CatChip({
     required this.label,
-    required this.emoji,
     required this.selected,
     required this.onTap,
   });
@@ -171,20 +167,13 @@ class _CatChip extends StatelessWidget {
             width: 1.4,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+          ),
         ),
       ),
     );
