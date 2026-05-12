@@ -282,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: recipes.suggestions.length.clamp(0, 6),
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      separatorBuilder: (context, i) => const SizedBox(width: 12),
                       itemBuilder: (_, i) {
                         final r = recipes.suggestions[i];
                         return SizedBox(
@@ -859,8 +859,8 @@ class _SuggestionsLoading extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: 3,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, __) => Container(
+        separatorBuilder: (ctx, i) => const SizedBox(width: 12),
+        itemBuilder: (ctx, i) => Container(
           width: 230,
           decoration: BoxDecoration(
             color: AppColors.surfaceMuted,
