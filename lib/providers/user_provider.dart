@@ -13,14 +13,17 @@ class UserProvider extends ChangeNotifier {
   bool get onboardingDone => _onboardingDone;
 
   // ── Persistence keys ────────────────────────────────────────────────────
-  static const _kOnboardingDone = 'fridgenie.onboarding_done';
-  static const _kName = 'fridgenie.name';
-  static const _kDietary = 'fridgenie.dietary';
-  static const _kSkill = 'fridgenie.skill';
-  static const _kCuisines = 'fridgenie.cuisines';
-  static const _kMood = 'fridgenie.mood';
-  static const _kAvatarEmoji = 'fridgenie.avatar_emoji';
-  static const _kAvatarBgColor = 'fridgenie.avatar_bg_color';
+  static const _kOnboardingDone    = 'fridgenie.onboarding_done';
+  static const _kName              = 'fridgenie.name';
+  static const _kDietary           = 'fridgenie.dietary';
+  static const _kSkill             = 'fridgenie.skill';
+  static const _kCuisines          = 'fridgenie.cuisines';
+  static const _kMood              = 'fridgenie.mood';
+  static const _kAvatarEmoji       = 'fridgenie.avatar_emoji';
+  static const _kAvatarBgColor     = 'fridgenie.avatar_bg_color';
+  static const _kRecipesCooked     = 'fridgenie.recipes_cooked';
+  static const _kCurrentStreak     = 'fridgenie.current_streak';
+  static const _kLongestStreak     = 'fridgenie.longest_streak';
 
   /// Hydrate state from SharedPreferences. Call once at app start.
   Future<void> hydrate() async {
@@ -60,8 +63,11 @@ class UserProvider extends ChangeNotifier {
             orElse: () => Mood.cozy,
           );
 
-    final avatarEmoji = p.getString(_kAvatarEmoji);
-    final avatarBgColor = p.getInt(_kAvatarBgColor);
+    final avatarEmoji    = p.getString(_kAvatarEmoji);
+    final avatarBgColor  = p.getInt(_kAvatarBgColor);
+    final recipesCooked  = p.getInt(_kRecipesCooked) ?? 0;
+    final currentStreak  = p.getInt(_kCurrentStreak) ?? 0;
+    final longestStreak  = p.getInt(_kLongestStreak) ?? 0;
 
     _profile = _profile.copyWith(
       name: name,
@@ -71,6 +77,9 @@ class UserProvider extends ChangeNotifier {
       defaultMood: mood,
       avatarEmoji: avatarEmoji,
       avatarBgColor: avatarBgColor,
+      recipesCooked: recipesCooked,
+      currentStreak: currentStreak,
+      longestStreak: longestStreak,
     );
     notifyListeners();
   }
@@ -98,6 +107,9 @@ class UserProvider extends ChangeNotifier {
     } else {
       await p.remove(_kAvatarBgColor);
     }
+    await p.setInt(_kRecipesCooked, _profile.recipesCooked);
+    await p.setInt(_kCurrentStreak, _profile.currentStreak);
+    await p.setInt(_kLongestStreak, _profile.longestStreak);
   }
 
   Future<void> setAvatarEmoji(String emoji) async {
