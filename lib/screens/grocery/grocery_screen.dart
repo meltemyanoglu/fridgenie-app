@@ -389,8 +389,8 @@ class _ReceiptRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.name,
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 15,
+                  style: GoogleFonts.caveat(
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: item.isChecked ? _inkFade : _ink,
                     decoration: item.isChecked ? TextDecoration.lineThrough : null,

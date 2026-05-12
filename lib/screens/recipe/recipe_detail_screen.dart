@@ -416,9 +416,17 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                   TextButton(
                                     onPressed: () {
                                       context
-                                          .read<FridgeProvider>()
-                                          .toggleInventory(g.ingredient.id);
+                                          .read<GroceryProvider>()
+                                          .addItem(g.ingredient.name, g.ingredient.emoji);
                                       setState(() => _groceries.remove(g));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '${g.ingredient.emoji} ${g.ingredient.name} added to grocery list',
+                                          ),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
                                     },
                                     child: const Text('Add'),
                                   ),
