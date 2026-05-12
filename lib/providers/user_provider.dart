@@ -164,6 +164,7 @@ class UserProvider extends ChangeNotifier {
           : _profile.longestStreak,
     );
     _evaluateBadges();
+    _persistProfile();
     notifyListeners();
   }
 

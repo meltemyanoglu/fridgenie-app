@@ -1098,17 +1098,22 @@ class _GeneratingSheetState extends State<_GeneratingSheet> {
     'Plating it up…',
   ];
   int _idx = 0;
-  late final Stream<int> _ticker;
+  late final StreamSubscription<int> _tickerSub;
 
   @override
   void initState() {
     super.initState();
-    _ticker = Stream<int>.periodic(
-        const Duration(milliseconds: 1600), (i) => i + 1);
-    _ticker.listen((i) {
+    _tickerSub = Stream<int>.periodic(
+        const Duration(milliseconds: 1600), (i) => i + 1).listen((i) {
       if (!mounted) return;
       setState(() => _idx = i % _lines.length);
     });
+  }
+
+  @override
+  void dispose() {
+    _tickerSub.cancel();
+    super.dispose();
   }
 
   @override

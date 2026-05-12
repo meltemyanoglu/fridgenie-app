@@ -369,7 +369,9 @@ class RecipeProvider extends ChangeNotifier {
     if (liked) {
       _liked.add(card.id);
       _favorites.add(card.id);
+      _favoriteTitles[card.id] = card.title;
       _saveFavorites();
+      _saveFavoriteTitles();
     } else {
       _passed.add(card.id);
     }
