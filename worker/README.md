@@ -1,110 +1,122 @@
-# Fridgenie vision worker
+# Fridgenie API Worker
 
-Cloudflare Worker that takes a base64 fridge photo and returns the food
-ingredients Gemini Vision spotted. The Gemini API key lives only on the
-Worker — the Flutter app never sees it.
+Cloudflare Worker that sits between the Flutter app and Google Gemini. The Gemini key lives only here as a secret; the app never sees it.
 
-## Deploy in 5 steps
+## Endpoints
 
-### 1. Get a Gemini API key (free)
+All `POST` endpoints need two headers:
 
-Visit <https://aistudio.google.com/app/apikey>, click **Create API key**,
-copy it. The free tier of `gemini-2.0-flash` is 1500 requests/day — plenty
-for an MVP.
+| Header | Value |
+|---|---|
+| `X-Fridgenie-Token` | The `APP_TOKEN` secret (also passed to the app at build time) |
+| `X-Device-Id` | Optional, 8–64 chars `[A-Za-z0-9_-]`; used as the rate-limit key (falls back to IP) |
 
-### 2. Install Wrangler
+### `GET /v1/health`
+Public. Returns `{ "status": "ok" }`.
 
-```bash
-cd worker
-npm install
-```
-
-### 3. Authenticate with Cloudflare
-
-```bash
-npx wrangler login
-```
-
-This opens your browser; sign in with a free Cloudflare account.
-
-### 4. Stash the Gemini key as a secret
-
-```bash
-npx wrangler secret put GEMINI_API_KEY
-```
-
-Paste the key when prompted. It's stored encrypted by Cloudflare and
-exposed to the Worker as `env.GEMINI_API_KEY`.
-
-### 5. Deploy
-
-```bash
-npx wrangler deploy
-```
-
-You'll get a URL like `https://fridgenie-vision.<your-handle>.workers.dev`.
-Save it — that's the value Flutter needs.
-
-## Wire the URL into the Flutter app
-
-```bash
-flutter run --dart-define=FRIDGENIE_BACKEND=https://fridgenie-vision.you.workers.dev
-```
-
-When `FRIDGENIE_BACKEND` is set, `createDefaultRecognizer()` picks
-`BackendVisionRecognizer` automatically. No `OPENAI_API_KEY` needed.
-
-For App Store / Play Store builds, hardcode it in
-`lib/data/services/ingredient_recognizer.dart` (the `_kBackendUrl`
-fallback) or pass it via your CI as a `--dart-define`.
-
-## Test locally
-
-Run the Worker locally:
-
-```bash
-npx wrangler dev
-```
-
-Then hit it:
-
-```bash
-# tiny test with a real JPEG
-IMG=$(base64 -i some_fridge_photo.jpg)
-curl -X POST http://127.0.0.1:8787 \
-  -H 'Content-Type: application/json' \
-  -d "{\"imageBase64\":\"$IMG\"}"
-```
-
-Expected response:
-
+### `POST /v1/scan`
 ```json
-{ "ingredients": ["tomato", "milk", "eggs", "onion"] }
+{ "imageBase64": "<base64 bytes>", "mimeType": "image/jpeg" }
 ```
+`mimeType` is optional (default `image/jpeg`; also `png`, `webp`, `heic`, `heif`). Max ~5 MB image.
 
-## Rate limiting (recommended once you ship)
+Returns `{ "ingredients": ["tomato", "eggs", "milk"] }` (lowercase, de-duplicated, max 15).
 
-Free tier abuse is real. Easiest fix is Cloudflare's built-in
-**Rate Limiting Rules** (Dashboard → your zone → Security → Rate Limiting).
-Set something like *10 requests per minute per IP* in front of this Worker.
-
-For per-device quotas, switch to Workers KV: store a daily counter keyed
-by an opaque device ID the app sends in a header.
-
-## API contract
-
-```
-POST  /
-Content-Type: application/json
-
+### `POST /v1/recipes`
+```json
 {
-  "imageBase64": "<JPEG bytes, base64>",
-  "mimeType":    "image/jpeg"   // optional, default image/jpeg
+  "ingredients": ["tomato", "eggs"],
+  "mode": "standard",
+  "count": 1,
+  "dietary": ["vegetarian"],
+  "mood": "cozy",
+  "cuisine": "turkish",
+  "skill": "comfortable",
+  "avoidTitles": ["Shakshuka"]
 }
-
-→ 200 OK
-{ "ingredients": ["tomato", "onion", "milk", ...] }
-
-→ 4xx / 5xx
-{ "error": "...", "detail": "..." }
 ```
+- `ingredients` is required (1–30) unless `mode` is `surpriseMe`.
+- `count` is 1–4 (default 1).
+- `mode`, `dietary`, `mood`, `cuisine`, `skill` use the Dart enum `.name` values; unknown values are ignored.
+- Every returned recipe satisfies **all** requested dietary rules; non-compliant ones are discarded.
+
+Returns `{ "recipes": [Recipe, ...] }`. Each recipe has `title, tagline, emoji, category, difficulty, cookMinutes, servings, nutrition{calories, proteinG, carbsG, fatG}, ingredients[], optionalIngredients[], steps[{order, text, minutes?}], substitutions[{missing, swap, reason}], moods[], cuisines[], dietary[], whyRecommended, tags[]`.
+
+### Errors
+Every error has the same shape, and `X-Request-Id` matches `requestId` in the logs:
+```json
+{ "error": { "code": "RATE_LIMITED", "message": "Too many requests. Please wait a minute.", "retryable": true }, "requestId": "..." }
+```
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `BAD_REQUEST` | Invalid JSON or fields |
+| 401 | `UNAUTHORIZED` | Missing/wrong app token |
+| 404 / 405 | `NOT_FOUND` / `METHOD_NOT_ALLOWED` | Wrong path or method |
+| 413 | `PAYLOAD_TOO_LARGE` | Body or image too big |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | Not JSON, or unsupported image type |
+| 422 | `AI_BAD_RESPONSE` | Gemini blocked the content |
+| 429 | `RATE_LIMITED` | Too many requests from this device |
+| 502 / 503 | `AI_BAD_RESPONSE` / `AI_UNAVAILABLE` | Gemini failed, timed out or replied badly |
+| 500 | `SERVER_MISCONFIGURED` / `INTERNAL` | Missing secret or unexpected bug |
+
+## Deploy (first time)
+
+1. Create a Gemini key at <https://aistudio.google.com/app/apikey>.
+2. Install and log in:
+   ```bash
+   cd worker
+   npm install
+   npx wrangler login
+   ```
+3. Store the secrets (you are prompted for each value):
+   ```bash
+   npx wrangler secret put GEMINI_API_KEY
+   npx wrangler secret put APP_TOKEN      # any long random string, e.g. from: openssl rand -hex 32
+   ```
+4. Deploy and note the URL (e.g. `https://fridgenie-api.<account>.workers.dev`):
+   ```bash
+   npm run deploy
+   ```
+5. Smoke-test it:
+   ```bash
+   URL=https://fridgenie-api.<account>.workers.dev
+   curl $URL/v1/health
+   curl -X POST $URL/v1/recipes \
+     -H 'Content-Type: application/json' \
+     -H "X-Fridgenie-Token: <APP_TOKEN>" \
+     -d '{"ingredients":["tomato","eggs","onion"]}'
+   ```
+
+## Configuration
+
+| Setting | Where | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | secret | Google Gemini key |
+| `APP_TOKEN` | secret | Shared token the app sends |
+| `GEMINI_MODEL` | `wrangler.toml` `[vars]` | Pinned model id; change and redeploy to upgrade |
+| `ALLOWED_ORIGINS` | `wrangler.toml` `[vars]` | Comma-separated web origins for CORS (only needed for Flutter web) |
+| `SCAN_RATE_LIMITER` / `RECIPE_RATE_LIMITER` | `wrangler.toml` `[[ratelimits]]` | Requests per minute per device |
+
+The app token is extractable from the app binary, so treat it as a speed bump. The rate limits and Google AI Studio quota caps are what actually protect the key.
+
+## Local development
+
+```bash
+cp .dev.vars.example .dev.vars   # fill in real values; the file is git-ignored
+npm run dev                       # http://localhost:8787
+npm test                          # unit tests, Gemini is mocked
+npm run tail                      # live logs from the deployed Worker
+```
+
+## Code layout
+
+| File | Responsibility |
+|---|---|
+| `src/index.js` | Routing, auth, rate limiting, error handling |
+| `src/handlers/` | One file per endpoint |
+| `src/validation.js` | Request parsing and normalization |
+| `src/prompts.js` / `src/schemas.js` | What we ask Gemini, and the JSON shape it must return |
+| `src/gemini.js` | HTTP client: timeout, single retry, error mapping |
+| `src/sanitize.js` | Forces Gemini output into the API contract |
+| `src/config.js` | Limits and enum lists shared by everything above |

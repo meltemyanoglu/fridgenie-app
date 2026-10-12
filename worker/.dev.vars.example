@@ -1,0 +1,3 @@
+# Local secrets for `npm run dev`. Copy to .dev.vars (git-ignored) and fill in.
+GEMINI_API_KEY=your-gemini-key
+APP_TOKEN=any-long-random-string

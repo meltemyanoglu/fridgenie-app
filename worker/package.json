@@ -1,14 +1,20 @@
 {
-  "name": "fridgenie-vision-worker",
+  "name": "fridgenie-api-worker",
   "private": true,
-  "version": "0.1.0",
-  "description": "Cloudflare Worker that proxies fridge photos to Google Gemini Vision.",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker that proxies Fridgenie scan and recipe requests to Google Gemini.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "wrangler": "^3.78.0"
+    "vitest": "^5.0.4",
+    "wrangler": "^4.149.0"
   }
 }

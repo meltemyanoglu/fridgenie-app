@@ -1,11 +1,34 @@
-name = "fridgenie-vision"
+# Fridgenie API Worker. Secrets (never commit them):
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put APP_TOKEN
+# For local dev, copy .dev.vars.example to .dev.vars and fill in the same values.
+
+name = "fridgenie-api"
 main = "src/index.js"
-compatibility_date = "2025-04-01"
+compatibility_date = "2026-10-01"
 
-# CPU time limit: vision calls take a few seconds, default 30ms is too tight.
-# Cloudflare paid plans allow up to 30s; free plan caps at 10ms CPU but the
-# wall-clock fetch happens off-thread, so this is fine on free tier too.
+[vars]
+# Pinned model id; change here to upgrade without touching code.
+GEMINI_MODEL = "gemini-3.5-flash-lite"
+# Comma-separated web origins allowed by CORS (native apps need none), e.g. "https://fridgenie.app".
+ALLOWED_ORIGINS = ""
 
-# Set the secret with:
-#   wrangler secret put GEMINI_API_KEY
-# (do NOT paste your key here — it would be committed in plain text)
+[observability]
+enabled = true
+
+# Per-client limits (key = device id or IP). namespace_id must be unique within the Cloudflare account.
+[[ratelimits]]
+name = "SCAN_RATE_LIMITER"
+namespace_id = "1101"
+
+  [ratelimits.simple]
+  limit = 6
+  period = 60
+
+[[ratelimits]]
+name = "RECIPE_RATE_LIMITER"
+namespace_id = "1102"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
