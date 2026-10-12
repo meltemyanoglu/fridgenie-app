@@ -92,6 +92,9 @@ class Recipe {
   final NutritionInfo nutrition;
   final List<String> requiredIngredientIds;
   final List<String> optionalIngredientIds;
+
+  /// AI-listed ingredients that are not in the catalog, as plain names.
+  final List<String> extraIngredientNames;
   final List<RecipeStep> steps;
   final List<Substitution> substitutions;
   final List<Mood> matchingMoods;
@@ -114,6 +117,7 @@ class Recipe {
     required this.nutrition,
     required this.requiredIngredientIds,
     required this.optionalIngredientIds,
+    this.extraIngredientNames = const [],
     required this.steps,
     required this.substitutions,
     required this.matchingMoods,
@@ -137,6 +141,7 @@ class Recipe {
         'nutrition': nutrition.toJson(),
         'requiredIngredientIds': requiredIngredientIds,
         'optionalIngredientIds': optionalIngredientIds,
+        'extraIngredientNames': extraIngredientNames,
         'steps': steps.map((s) => s.toJson()).toList(),
         'substitutions': substitutions.map((s) => s.toJson()).toList(),
         'matchingMoods': matchingMoods.map((m) => m.name).toList(),
@@ -172,6 +177,8 @@ class Recipe {
             List<String>.from((j['requiredIngredientIds'] as List?) ?? []),
         optionalIngredientIds:
             List<String>.from((j['optionalIngredientIds'] as List?) ?? []),
+        extraIngredientNames:
+            List<String>.from((j['extraIngredientNames'] as List?) ?? []),
         steps: ((j['steps'] as List?) ?? [])
             .map((s) => RecipeStep.fromJson(s as Map<String, dynamic>))
             .toList(),

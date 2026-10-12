@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
 import 'data/services/ai_service.dart';
-import 'data/services/gemini_service.dart';
+import 'data/services/device_id.dart';
+import 'data/services/fridgenie_api.dart';
 import 'data/services/ingredient_recognizer.dart';
+import 'data/services/worker_fridgenie_api.dart';
 import 'providers/fridge_provider.dart';
 import 'providers/grocery_provider.dart';
 import 'providers/recipe_provider.dart';
@@ -20,12 +24,32 @@ Future<void> main() async {
   final userProvider = UserProvider();
   await userProvider.hydrate();
 
-  runApp(FridgenieApp(userProvider: userProvider));
+  final api = await _createApi();
+  runApp(FridgenieApp(userProvider: userProvider, api: api));
+}
+
+/// Builds the Worker client, or returns null to run in demo mode.
+Future<FridgenieApi?> _createApi() async {
+  if (!AppConfig.isBackendConfigured) {
+    debugPrint('[Fridgenie] Backend not configured: running in demo mode.');
+    return null;
+  }
+  final prefs = await SharedPreferences.getInstance();
+  debugPrint('[Fridgenie] Backend: ${AppConfig.backendUri.host}');
+  return WorkerFridgenieApi(
+    baseUri: AppConfig.backendUri,
+    appToken: AppConfig.appToken,
+    deviceId: await DeviceId.loadOrCreate(prefs),
+  );
 }
 
 class FridgenieApp extends StatelessWidget {
   final UserProvider userProvider;
-  const FridgenieApp({super.key, required this.userProvider});
+
+  /// Real AI client; null runs the app in demo mode (used by tests too).
+  final FridgenieApi? api;
+
+  const FridgenieApp({super.key, required this.userProvider, this.api});
 
   @override
   Widget build(BuildContext context) {
@@ -35,33 +59,25 @@ class FridgenieApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FridgeProvider()),
         ChangeNotifierProvider(create: (_) => GroceryProvider()),
 
-        // Mock AI — always available, powers category/mood suggestions.
+        // Offline recipe brain: suggestions, fallbacks, tips.
         Provider<AIService>(create: (_) => AIService()),
 
-        // Real Gemini — available when GEMINI_API_KEY is set at build time.
-        // Pass it with:  flutter run --dart-define=GEMINI_API_KEY=your_key
-        // When null the app uses mock fallback gracefully.
-        Provider<GeminiService?>(create: (_) => GeminiService.create()),
-
-        // Vision recognizer — mock by default, backend when configured.
-        Provider<IngredientRecognizer>(
-          create: (_) => createDefaultRecognizer(),
+        // Real AI via the Worker; null means demo mode.
+        Provider<FridgenieApi?>(
+          create: (_) => api,
+          dispose: (_, client) => client?.close(),
         ),
 
-        ChangeNotifierProxyProvider2<UserProvider, GeminiService?,
-            RecipeProvider>(
+        Provider<IngredientRecognizer>(
+          create: (ctx) => createDefaultRecognizer(ctx.read<FridgenieApi?>()),
+        ),
+
+        ChangeNotifierProvider<RecipeProvider>(
           create: (ctx) => RecipeProvider(
             aiService: ctx.read<AIService>(),
             userProvider: ctx.read<UserProvider>(),
-            geminiService: ctx.read<GeminiService?>(),
+            api: ctx.read<FridgenieApi?>(),
           ),
-          update: (ctx, user, gemini, prev) =>
-              prev ??
-              RecipeProvider(
-                aiService: ctx.read<AIService>(),
-                userProvider: user,
-                geminiService: gemini,
-              ),
         ),
       ],
       child: MaterialApp(

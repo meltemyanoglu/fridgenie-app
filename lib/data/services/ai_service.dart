@@ -6,27 +6,11 @@ import '../mock/mock_tips.dart';
 import '../models/enums.dart';
 import '../models/genie_tip.dart';
 import '../models/ingredient.dart';
+import '../models/ranked_recipe.dart';
 import '../models/recipe.dart';
 import '../models/user_profile.dart';
 
-/// Result wrapper for ranked recipe suggestions.
-class RankedRecipe {
-  final Recipe recipe;
-  final double matchScore; // 0..1
-  final List<String> haveIngredients;
-  final List<String> missingIngredients;
-  final String aiReason;
-
-  const RankedRecipe({
-    required this.recipe,
-    required this.matchScore,
-    required this.haveIngredients,
-    required this.missingIngredients,
-    required this.aiReason,
-  });
-
-  int get matchPercent => (matchScore * 100).round();
-}
+export '../models/ranked_recipe.dart';
 
 /// Simulated grocery suggestion with reasoning.
 class GrocerySuggestion {
@@ -35,9 +19,9 @@ class GrocerySuggestion {
   const GrocerySuggestion({required this.ingredient, required this.reason});
 }
 
-/// Mock AI service. Real OpenAI/Anthropic calls would slot in here without
-/// changing the rest of the app. Every method returns Future<T> with a small
-/// artificial delay so the UI can show its delightful loading states.
+/// Offline recipe brain built on the mock catalog.
+/// Real AI calls live in FridgenieApi.
+/// Methods add a short delay so the UI can show its loading states.
 class AIService {
   final Random _rng;
   AIService({Random? rng}) : _rng = rng ?? Random();
@@ -115,6 +99,31 @@ class AIService {
       missingIngredients: const [],
       aiReason: 'Genie rolled the dice and picked something ${recipe.matchingMoods.first.label.toLowerCase()}.',
     );
+  }
+
+  /// Best offline recipe for [mode], used when the AI backend is missing or fails.
+  Future<Recipe> fallbackRecipe({
+    required Set<String> ingredientIds,
+    required UserProfile profile,
+    required GenieMode mode,
+  }) async {
+    if (mode == GenieMode.surpriseMe || ingredientIds.isEmpty) {
+      return (await surpriseMe(profile: profile)).recipe;
+    }
+
+    final ranked = mode == GenieMode.leftoversRescue
+        ? await rescueLeftovers(ingredientIds: ingredientIds, profile: profile)
+        : await suggestRecipes(ingredientIds: ingredientIds, profile: profile);
+
+    final candidates = mode == GenieMode.healthyQuick
+        ? ranked.where((r) =>
+            r.recipe.category == RecipeCategory.healthy ||
+            r.recipe.cookMinutes <= 20)
+        : ranked;
+
+    if (candidates.isNotEmpty) return candidates.first.recipe;
+    if (ranked.isNotEmpty) return ranked.first.recipe;
+    return (await surpriseMe(profile: profile)).recipe;
   }
 
   /// Fridge Challenge: suggest a recipe that uses ONLY the chosen 3 ingredients.

@@ -103,3 +103,13 @@ enum IngredientCategory {
   final String label;
   final String emoji;
 }
+
+/// Cooking style requested from the AI chef; names match the Worker API `mode` values.
+enum GenieMode {
+  standard,
+  surpriseMe,
+  challenge3,
+  leftoversRescue,
+  healthyQuick,
+  moodBased,
+}

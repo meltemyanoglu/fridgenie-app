@@ -11,8 +11,8 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | – | Analysis | ✅ Done | – | [00-analysis.md](00-analysis.md) |
 | – | Plan | ✅ Done | – | [01-plan.md](01-plan.md) |
 | 1 | Worker rewrite | ✅ Done · ⏳ not deployed | `9213696` | [02-step1-worker-rewrite.md](02-step1-worker-rewrite.md) |
-| 2 | Dart API layer | ⏳ Next | | |
-| 3 | Storage fixes | ⏳ | | |
+| 2 | Dart API layer | ✅ Done · ⚠️ needs `flutter analyze`/`test` | "feat(app): route all AI calls through the Worker" | [03-step2-dart-api-layer.md](03-step2-dart-api-layer.md) |
+| 3 | Storage fixes | ⏳ Next | | |
 | 4 | Business logic fixes | ⏳ | | |
 | 5 | Tests + CI | ⏳ | | |
 | 6 | Cleanup + handoff | ⏳ | | |
@@ -33,6 +33,9 @@ All times are Europe/Rome.
 | 2026-10-12 14:49 | Commit `9213696` (Step 1). Push from Claude's sandbox refused: the Claude GitHub App isn't installed on the repo, so Bilge pushes via a patch file |
 | 2026-10-12 15:01 | This work log created, plus a shared Google Drive copy |
 | 2026-10-12 15:02 | Found that Claude's sandbox can't download Flutter, so Dart steps must be checked with `flutter analyze` / `flutter test` on Bilge's machine |
+| 2026-10-12 15:04 | Step 2 started: mapped every provider method the screens use, so none of them get renamed |
+| 2026-10-12 15:09 | New ingredient matcher checked in a simulation against all 28 test cases: all pass |
+| 2026-10-12 15:12 | Step 2 committed: the app now reaches the AI only through the Worker; Gemini key gone from the app |
 
 ## How to read a step log
 Every step file has the same parts:

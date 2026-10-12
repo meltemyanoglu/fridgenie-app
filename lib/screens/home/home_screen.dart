@@ -10,7 +10,6 @@ import '../../core/utils/extensions.dart';
 import '../../data/mock/mock_ingredients.dart';
 import '../../data/models/enums.dart';
 import '../../data/services/ai_service.dart';
-import '../../data/services/gemini_service.dart';
 import '../../providers/fridge_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/user_provider.dart';

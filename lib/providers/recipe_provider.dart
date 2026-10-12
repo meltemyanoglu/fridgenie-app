@@ -3,31 +3,37 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/mock/mock_ingredients.dart';
 import '../data/mock/mock_recipes.dart';
 import '../data/models/enums.dart';
 import '../data/models/recipe.dart';
 import '../data/services/ai_service.dart';
-import '../data/services/gemini_service.dart';
+import '../data/services/fridgenie_api.dart';
 import 'user_provider.dart';
 
 enum RequestState { idle, loading, success, error }
 
 class RecipeProvider extends ChangeNotifier {
+  static const _tag = '[RecipeProvider]';
+
   final AIService _ai;
   final UserProvider _userProvider;
-  final GeminiService? _gemini;
+
+  /// Null when the backend isn't configured; the app then runs in demo mode.
+  final FridgenieApi? _api;
 
   RecipeProvider({
     required AIService aiService,
     required UserProvider userProvider,
-    GeminiService? geminiService,
+    FridgenieApi? api,
   })  : _ai = aiService,
         _userProvider = userProvider,
-        _gemini = geminiService {
+        _api = api {
     _loadFavorites();
   }
 
-  bool get geminiAvailable => _gemini?.isAvailable == true;
+  /// True when real AI (Gemini via the Worker) is available.
+  bool get geminiAvailable => _api != null;
 
   // ── Suggestions (mock AI) ───────────────────────────────────────────────
   List<RankedRecipe> _suggestions = [];
@@ -72,8 +78,8 @@ class RecipeProvider extends ChangeNotifier {
   String? get geminiError => _geminiError;
   bool get lastGenerationUsedGemini => _lastGenerationUsedGemini;
 
-  /// Generate a bespoke recipe with Gemini (falls back to mock on failure).
-  /// Returns the resulting [RankedRecipe] so callers can navigate to detail.
+  /// Generates one AI recipe; on failure falls back to an offline recipe and
+  /// explains why in [geminiError]. Returns null only on unexpected errors.
   Future<RankedRecipe?> generateWithGemini({
     required List<String> ingredientIds,
     GenieMode mode = GenieMode.standard,
@@ -83,58 +89,71 @@ class RecipeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      RecipeResult result;
-
-      if (_gemini != null) {
-        result = await _gemini.generateRecipe(
-          ingredientIds: ingredientIds,
-          dietary: _userProvider.profile.dietary,
-          mood: _userProvider.profile.defaultMood,
-          cuisine: _userProvider.profile.favoriteCuisines.isNotEmpty
-              ? _userProvider.profile.favoriteCuisines.first
-              : null,
-          skill: _userProvider.profile.skill,
-          mode: mode,
-          avoidTitles: _generatedRecipes.map((r) => r.title).take(10).toList(),
-        );
-      } else {
-        // No Gemini key — use mock fallback directly.
-        final mockRecipe = await _ai.surpriseMe(profile: _userProvider.profile);
-        result = RecipeResult.fromMock(
-          mockRecipe.recipe,
-          reason: 'Add a Gemini API key to unlock real AI generation.',
-        );
-      }
-
-      _lastGenerationUsedGemini = result.fromGemini;
-
-      if (result.fallbackReason != null) {
-        _geminiError = result.fallbackReason;
-      }
-
-      addGeneratedRecipe(result.recipe);
-
+      final generation =
+          await _generate(ingredientIds: ingredientIds, mode: mode);
+      _lastGenerationUsedGemini = generation.fromAi;
+      _geminiError = generation.fallbackReason;
+      if (generation.fromAi) addGeneratedRecipe(generation.recipe);
       _geminiState = RequestState.success;
       notifyListeners();
-
-      return RankedRecipe(
-        recipe: result.recipe,
-        matchScore: 1.0,
-        haveIngredients: result.recipe.requiredIngredientIds
-            .where(ingredientIds.contains)
-            .toList(),
-        missingIngredients: result.recipe.requiredIngredientIds
-            .where((id) => !ingredientIds.contains(id))
-            .toList(),
-        aiReason: result.recipe.whyRecommended,
-      );
-    } catch (e) {
+      return RankedRecipe.fromCoverage(generation.recipe, ingredientIds);
+    } catch (e, stack) {
+      debugPrint('$_tag generateWithGemini failed: $e\n$stack');
       _geminiState = RequestState.error;
       _geminiError = 'Something went wrong. Try again in a moment.';
       notifyListeners();
       return null;
     }
   }
+
+  /// Asks the AI for one recipe, or returns an offline recipe with a reason.
+  Future<_Generation> _generate({
+    required List<String> ingredientIds,
+    required GenieMode mode,
+  }) async {
+    final profile = _userProvider.profile;
+    final api = _api;
+
+    if (api == null) {
+      return _Generation.fallback(
+        await _fallbackRecipe(ingredientIds, mode),
+        'Connect the Fridgenie backend to unlock real AI recipes.',
+      );
+    }
+
+    try {
+      final recipes = await api.generateRecipes(RecipeRequest(
+        ingredientNames: ingredientIds.map(_ingredientName).toList(),
+        mode: mode,
+        dietary: profile.dietary,
+        mood: profile.defaultMood,
+        cuisine: profile.favoriteCuisines.isEmpty
+            ? null
+            : profile.favoriteCuisines.first,
+        skill: profile.skill,
+        avoidTitles: _generatedRecipes.map((r) => r.title).take(10).toList(),
+      ));
+      debugPrint('$_tag AI recipe "${recipes.first.title}" ($mode)');
+      return _Generation.ai(recipes.first);
+    } on FridgenieApiException catch (e) {
+      debugPrint('$_tag AI failed, using offline recipe: $e');
+      return _Generation.fallback(
+        await _fallbackRecipe(ingredientIds, mode),
+        '${e.userMessage} Showing a demo recipe instead.',
+      );
+    }
+  }
+
+  Future<Recipe> _fallbackRecipe(List<String> ingredientIds, GenieMode mode) =>
+      _ai.fallbackRecipe(
+        ingredientIds: ingredientIds.toSet(),
+        profile: _userProvider.profile,
+        mode: mode,
+      );
+
+  static String _ingredientName(String id) =>
+      (MockIngredients.byId(id)?.name ?? id.replaceAll('_', ' '))
+          .toLowerCase();
 
   // ── Mood-based ──────────────────────────────────────────────────────────
   List<RankedRecipe> _moodSuggestions = [];
@@ -163,20 +182,11 @@ class RecipeProvider extends ChangeNotifier {
     _suggestionsState = RequestState.loading;
     notifyListeners();
 
-    if (_gemini != null) {
-      // Try Gemini surprise mode — fall back silently to mock.
-      final fakeIds = <String>[];
-      final result = await _gemini.generateRecipe(
-        ingredientIds: fakeIds,
-        mode: GenieMode.surpriseMe,
-      );
-      _surprise = RankedRecipe(
-        recipe: result.recipe,
-        matchScore: 1.0,
-        haveIngredients: const [],
-        missingIngredients: const [],
-        aiReason: result.recipe.whyRecommended,
-      );
+    if (_api != null) {
+      final generation =
+          await _generate(ingredientIds: const [], mode: GenieMode.surpriseMe);
+      if (generation.fromAi) addGeneratedRecipe(generation.recipe);
+      _surprise = RankedRecipe.fromCoverage(generation.recipe, const []);
     } else {
       _surprise = await _ai.surpriseMe(profile: _userProvider.profile);
     }
@@ -377,4 +387,18 @@ class RecipeProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
+}
+
+/// Result of one generation attempt: the recipe and whether real AI made it.
+class _Generation {
+  final Recipe recipe;
+  final bool fromAi;
+  final String? fallbackReason;
+
+  const _Generation.ai(this.recipe)
+      : fromAi = true,
+        fallbackReason = null;
+
+  const _Generation.fallback(this.recipe, String this.fallbackReason)
+      : fromAi = false;
 }

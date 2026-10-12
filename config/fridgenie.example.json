@@ -1,0 +1,4 @@
+{
+  "FRIDGENIE_BACKEND": "https://fridgenie-api.<your-account>.workers.dev",
+  "FRIDGENIE_APP_TOKEN": "<same value as the Worker APP_TOKEN secret>"
+}

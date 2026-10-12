@@ -88,6 +88,17 @@ Every error has the same shape, and `X-Request-Id` matches `requestId` in the lo
      -d '{"ingredients":["tomato","eggs","onion"]}'
    ```
 
+## Connect the Flutter app
+
+1. Copy `config/fridgenie.example.json` (repo root) to `config/fridgenie.json`. That file is git-ignored.
+2. Fill in the Worker URL and the same `APP_TOKEN` value.
+3. Run or build with:
+   ```bash
+   flutter run --dart-define-from-file=config/fridgenie.json
+   flutter build apk --dart-define-from-file=config/fridgenie.json
+   ```
+Without that flag the app runs in demo mode (mock scan, offline recipes) and never calls the network.
+
 ## Configuration
 
 | Setting | Where | Purpose |
