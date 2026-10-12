@@ -63,11 +63,9 @@ class FridgenieApp extends StatelessWidget {
         // Offline recipe brain: suggestions, fallbacks, tips.
         Provider<AIService>(create: (_) => AIService()),
 
-        // Real AI via the Worker; null means demo mode.
-        Provider<FridgenieApi?>(
-          create: (_) => api,
-          dispose: (_, client) => client?.close(),
-        ),
+        // Real AI via the Worker; null means demo mode. The client lives as
+        // long as the app process, so it is shared as a value, not disposed.
+        Provider<FridgenieApi?>.value(value: api),
 
         Provider<IngredientRecognizer>(
           create: (ctx) => createDefaultRecognizer(ctx.read<FridgenieApi?>()),

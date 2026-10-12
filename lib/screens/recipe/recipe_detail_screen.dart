@@ -41,10 +41,17 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   void _markCooked() {
-    context.read<RecipeProvider>().markCooked(widget.ranked.recipe);
+    final result =
+        context.read<RecipeProvider>().markCooked(widget.ranked.recipe);
+    final streak = result.streakIncreased
+        ? 'Streak ${result.streak} 🔥'
+        : 'Cooked! 🍳';
+    final badges = result.newBadges.map((b) => '${b.emoji} ${b.name}');
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cooked! Streak +1 🔥'),
+      SnackBar(
+        content: Text(
+          badges.isEmpty ? streak : '$streak · New badge: ${badges.join(', ')}',
+        ),
       ),
     );
     Navigator.of(context).pop();

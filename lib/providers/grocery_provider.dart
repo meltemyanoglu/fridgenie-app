@@ -36,14 +36,19 @@ class GroceryProvider extends ChangeNotifier {
   int get totalCount => _items.length;
   int get checkedCount => checked.length;
 
-  bool contains(String name) {
-    final key = name.trim().toLowerCase();
-    return _items.any((i) => i.name.trim().toLowerCase() == key);
-  }
+  bool contains(String name) => _indexOfName(name) != -1;
 
+  /// Adds [name]; re-adding an item that is checked (about to vanish)
+  /// un-checks it and keeps it on the list instead of ignoring the tap.
   void addItem(String name, String emoji) {
     final trimmed = name.trim();
-    if (trimmed.isEmpty || contains(trimmed)) return;
+    if (trimmed.isEmpty) return;
+
+    final existing = _indexOfName(trimmed);
+    if (existing != -1) {
+      if (_items[existing].isChecked) toggleItem(_items[existing].id);
+      return;
+    }
     _items.add(GroceryItem(
       id: '${DateTime.now().microsecondsSinceEpoch}_${_idCounter++}',
       name: trimmed,
@@ -87,6 +92,11 @@ class GroceryProvider extends ChangeNotifier {
     _removalTimers.clear();
     _items.clear();
     _commit();
+  }
+
+  int _indexOfName(String name) {
+    final key = name.trim().toLowerCase();
+    return _items.indexWhere((i) => i.name.trim().toLowerCase() == key);
   }
 
   void _cancelTimer(String id) => _removalTimers.remove(id)?.cancel();

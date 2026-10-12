@@ -72,6 +72,16 @@ void main() {
       });
     });
 
+    test('re-adding a checked item keeps it instead of losing it', () {
+      fakeAsync((async) {
+        final grocery = GroceryProvider(store)..addItem('Milk', '🥛');
+        grocery.toggleItem(grocery.items.single.id);
+        grocery.addItem('milk', '🥛');
+        async.elapse(const Duration(seconds: 6));
+        expect(grocery.items.single.isChecked, isFalse);
+      });
+    });
+
     test('clearAll cancels pending removals', () {
       fakeAsync((async) {
         final grocery = GroceryProvider(store)..addItem('Milk', '🥛');

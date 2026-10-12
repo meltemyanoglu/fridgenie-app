@@ -1,5 +1,6 @@
 // Smoke test: boots Fridgenie in demo mode and checks the splash wordmark.
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fridgenie/data/storage/local_store.dart';
 import 'package:fridgenie/main.dart';
@@ -15,5 +16,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('Fridgenie'), findsWidgets);
+
+    // Unmount and let the splash screen's delayed navigation finish, so no
+    // timer is left pending when the test ends.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 2));
   });
 }

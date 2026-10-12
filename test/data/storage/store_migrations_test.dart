@@ -34,6 +34,21 @@ void main() {
         StoreMigrations.currentVersion);
   });
 
+  test('undated v1 streaks are reset, recipes cooked is kept', () async {
+    SharedPreferences.setMockInitialValues({
+      StorageKeys.currentStreak: 9,
+      StorageKeys.longestStreak: 12,
+      StorageKeys.recipesCooked: 12,
+    });
+    final store = await LocalStore.open();
+
+    StoreMigrations.run(store);
+
+    expect(store.getInt(StorageKeys.currentStreak), 0);
+    expect(store.getInt(StorageKeys.longestStreak), 0);
+    expect(store.getInt(StorageKeys.recipesCooked), 12);
+  });
+
   test('a fresh install just records the current version', () async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();

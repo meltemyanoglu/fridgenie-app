@@ -47,6 +47,10 @@ class IngredientMatcher {
     'egg white': 'eggs',
     'egg yolk': 'eggs',
     'red pepper flake': 'chili',
+    'almond milk': null,
+    'oat milk': null,
+    'soy milk': null,
+    'rice milk': null,
     'ice cream': null,
     'peanut': null,
     'olive': null,
@@ -108,6 +112,7 @@ class IngredientMatcher {
   /// Lowercases, folds accents, keeps letters/digits, singularizes each word.
   static List<String> _normalize(String raw) => raw
       .toLowerCase()
+      .replaceAll(RegExp('[\u0300-\u036f]'), '')
       .split('')
       .map((char) => _accents[char] ?? char)
       .join()

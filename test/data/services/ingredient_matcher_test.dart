@@ -43,6 +43,8 @@ void main() {
 
     test('folds accents and ignores punctuation', () {
       expect(idOf('Jalapeño'), 'chili');
+      expect(idOf('Jalapen\u0303o'), 'chili');
+      expect(idOf('oat milk'), isNull);
       expect(idOf('  Garlic, minced '), 'garlic');
       expect(idOf(''), isNull);
       expect(idOf('!!!'), isNull);

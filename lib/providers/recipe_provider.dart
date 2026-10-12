@@ -218,30 +218,43 @@ class RecipeProvider extends ChangeNotifier {
   // ── Surprise Me ─────────────────────────────────────────────────────────
   RankedRecipe? _surprise;
   RequestState _surpriseState = RequestState.idle;
+  String? _surpriseFallbackReason;
+  int _surpriseRequest = 0;
 
   RankedRecipe? get surprise => _surprise;
   RequestState get surpriseState => _surpriseState;
 
+  /// Why the last surprise is a demo recipe instead of a real AI one.
+  String? get surpriseFallbackReason => _surpriseFallbackReason;
+
   /// Rolls a surprise recipe; [ingredientIds] lets the AI use the fridge.
   Future<void> rollSurprise({Set<String> ingredientIds = const {}}) async {
+    final request = ++_surpriseRequest;
     _surpriseState = RequestState.loading;
     notifyListeners();
 
     try {
+      final RankedRecipe result;
+      String? fallbackReason;
       if (_api != null) {
         final generation = await _generate(
           ingredientIds: ingredientIds.toList(),
           mode: GenieMode.surpriseMe,
         );
-        _surprise = RankedRecipe.fromCoverage(generation.recipe, ingredientIds);
+        result = RankedRecipe.fromCoverage(generation.recipe, ingredientIds);
+        fallbackReason = generation.fallbackReason;
       } else {
-        _surprise = await _ai.surpriseMe(
+        result = await _ai.surpriseMe(
           profile: _userProvider.profile,
           ingredientIds: ingredientIds,
         );
       }
+      if (request != _surpriseRequest) return;
+      _surprise = result;
+      _surpriseFallbackReason = fallbackReason;
       _surpriseState = RequestState.success;
     } catch (e, stack) {
+      if (request != _surpriseRequest) return;
       _logFailure('rollSurprise', e, stack);
       _surpriseState = RequestState.error;
     }
@@ -296,13 +309,23 @@ class RecipeProvider extends ChangeNotifier {
 
   // ── Cooking ─────────────────────────────────────────────────────────────
 
-  /// Marks [recipe] as cooked; Surprise and challenge recipes count for
-  /// their badges. The result tells the UI about streaks and new badges.
-  CookResult markCooked(Recipe recipe) => _userProvider.recordCookedRecipe(
-        recipe,
-        fromSurprise: _surprise?.recipe.id == recipe.id,
-        fromChallenge: _challengeResults.any((r) => r.recipe.id == recipe.id),
-      );
+  /// Surprise/challenge recipes already counted, so re-cooking the same one
+  /// can't farm the Wildcard or Minimalist badge.
+  final Set<String> _countedSourceIds = {};
+
+  /// Marks [recipe] as cooked; the result tells the UI about the streak and
+  /// any new badges.
+  CookResult markCooked(Recipe recipe) {
+    final isSurprise = _surprise?.recipe.id == recipe.id;
+    final isChallenge = _challengeResults.any((r) => r.recipe.id == recipe.id);
+    final counts =
+        (isSurprise || isChallenge) && _countedSourceIds.add(recipe.id);
+    return _userProvider.recordCookedRecipe(
+      recipe,
+      fromSurprise: counts && isSurprise,
+      fromChallenge: counts && isChallenge,
+    );
+  }
 
   // ── Favorites (full recipe snapshots, so they never disappear) ─────────
   /// Keyed by recipe id, in the order they were added.

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -90,12 +89,18 @@ class WorkerFridgenieApi implements FridgenieApi {
         'Request timed out.',
         retryable: true,
       );
-    } catch (error) {
+    } on http.ClientException catch (error) {
       debugPrint('$_tag POST $path network error: $error');
       throw FridgenieApiException(
         FridgenieErrorCode.network,
         'Network error: $error',
         retryable: true,
+      );
+    } catch (error, stack) {
+      debugPrint('$_tag POST $path unexpected error: $error\n$stack');
+      throw FridgenieApiException(
+        FridgenieErrorCode.unknown,
+        'Unexpected error: $error',
       );
     }
 
@@ -103,7 +108,9 @@ class WorkerFridgenieApi implements FridgenieApi {
     debugPrint('$_tag POST $path -> ${response.statusCode} '
         'in ${stopwatch.elapsedMilliseconds}ms (requestId: $requestId)');
 
-    final decoded = _decode(response.body);
+    // Decode bytes as UTF-8 ourselves so emoji survive a missing charset.
+    final decoded =
+        _decode(utf8.decode(response.bodyBytes, allowMalformed: true));
     if (response.statusCode == 200 && decoded != null) return decoded;
     throw _toException(response.statusCode, decoded, requestId);
   }

@@ -23,9 +23,11 @@ class StoreMigrations {
     store.setInt(StorageKeys.schemaVersion, currentVersion);
   }
 
-  /// v1 stored favorite ids only, so favorites of old AI recipes got lost once
-  /// the 50-recipe cap dropped them. v2 stores full recipe snapshots.
+  /// v1 stored favorite ids only (lost after the 50-recipe cap) and counted a
+  /// streak +1 per cook with no dates. v2 stores full recipes and day streaks.
   static void _toVersion2(LocalStore store) {
+    _resetUndatedStreak(store);
+
     final legacyIds = store.getStringList(StorageKeys.legacyFavorites) ?? [];
     if (legacyIds.isNotEmpty) {
       final generated = store.readJsonList(
@@ -49,5 +51,19 @@ class StoreMigrations {
 
     store.remove(StorageKeys.legacyFavorites);
     store.remove(StorageKeys.legacyFavoriteTitles);
+  }
+
+  /// v1 streaks have no dates and were inflated by repeated taps, so they
+  /// can't be trusted; recipes cooked stays as the honest lifetime count.
+  static void _resetUndatedStreak(LocalStore store) {
+    if (store.containsKey(StorageKeys.lastCookedOn)) return;
+    final current = store.getInt(StorageKeys.currentStreak) ?? 0;
+    final longest = store.getInt(StorageKeys.longestStreak) ?? 0;
+    if (current == 0 && longest == 0) return;
+
+    store.setInt(StorageKeys.currentStreak, 0);
+    store.setInt(StorageKeys.longestStreak, 0);
+    debugPrint('$_tag reset undated v1 streak (current $current, '
+        'longest $longest)');
   }
 }

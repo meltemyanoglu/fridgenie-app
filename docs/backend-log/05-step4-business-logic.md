@@ -4,7 +4,7 @@
 |---|---|
 | **When** | 2026-10-12, 15:19 – 15:26 (Europe/Rome) |
 | **Who** | Claude, for Bilge |
-| **Commit** | see the status table in [README](README.md) |
+| **Commit** | `f8b287b` fix(app): correct dietary, streak, badge and loading-state logic |
 | **Verified** | ✅ Worker: 31 tests pass, including the shared dietary rule · ✅ test assumptions checked against the real mock recipes · ⚠️ Dart code **not compiled yet**: run `flutter analyze` and `flutter test` |
 
 ## In one sentence

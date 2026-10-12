@@ -166,14 +166,16 @@ void main() {
     expect(provider.generatedRecipes, isEmpty);
   });
 
-  test('cooking the current surprise counts for the Wildcard badge', () async {
+  test('cooking a surprise counts once for the Wildcard badge', () async {
     final provider = newProvider();
     await provider.rollSurprise();
 
-    provider.markCooked(provider.surprise!.recipe);
+    provider
+      ..markCooked(provider.surprise!.recipe)
+      ..markCooked(provider.surprise!.recipe);
 
     final wildcard = user.badges.firstWhere((b) => b.id == 'surprise_chef');
-    expect(wildcard.progress, 33);
-    expect(user.profile.recipesCooked, 1);
+    expect(wildcard.progress, 33, reason: 'the same surprise counts once');
+    expect(user.profile.recipesCooked, 2);
   });
 }

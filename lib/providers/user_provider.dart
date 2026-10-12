@@ -16,11 +16,10 @@ class UserProvider extends ChangeNotifier {
     _profile = _loadProfile();
     _stats =
         CookingStats.fromJson(_store.readJsonMap(StorageKeys.cookingStats));
-    _expireStreak();
     _badges = BadgeRules.evaluate(_stats, _profile);
     debugPrint('$_tag loaded profile "${_profile.name}", '
         'onboarding ${_onboardingDone ? 'done' : 'pending'}, '
-        'streak ${_profile.currentStreak}, $earnedBadgeCount badges');
+        'streak ${profile.currentStreak}, $earnedBadgeCount badges');
   }
 
   static const _tag = '[UserProvider]';
@@ -32,7 +31,11 @@ class UserProvider extends ChangeNotifier {
   UserProfile _profile = const UserProfile();
   bool _onboardingDone = false;
 
-  UserProfile get profile => _profile;
+  /// The profile as of now: a streak whose last cooking day is before
+  /// yesterday reads as 0, even if the app stayed open across days.
+  UserProfile get profile => _isStreakExpired(_dateOnly(_clock()))
+      ? _profile.copyWith(currentStreak: 0)
+      : _profile;
   bool get onboardingDone => _onboardingDone;
 
   /// Reads the saved profile; unknown enum names are skipped, not defaulted.
@@ -169,7 +172,7 @@ class UserProvider extends ChangeNotifier {
     final today = _dateOnly(now);
     final last = _profile.lastCookedOn;
     final gap = last == null ? null : _daysBetween(last, today);
-    final previousStreak = _profile.currentStreak;
+    final previousStreak = profile.currentStreak;
 
     // Same day keeps the streak, the next day extends it, a gap restarts it.
     final streak = switch (gap) {
@@ -237,15 +240,11 @@ class UserProvider extends ChangeNotifier {
     return newIds;
   }
 
-  /// A streak whose last cooking day is before yesterday is over.
-  void _expireStreak() {
+  bool _isStreakExpired(DateTime today) {
     final last = _profile.lastCookedOn;
-    if (last == null || _profile.currentStreak == 0) return;
-    if (_daysBetween(last, _dateOnly(_clock())) > 1) {
-      debugPrint('$_tag streak of ${_profile.currentStreak} expired');
-      _profile = _profile.copyWith(currentStreak: 0);
-      _persistProfile();
-    }
+    return last != null &&
+        _profile.currentStreak > 0 &&
+        _daysBetween(last, today) > 1;
   }
 
   void _persistStats() =>
