@@ -334,9 +334,10 @@ class _AiCreatedTab extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Enable AI mode 🧞'),
         content: const Text(
-          'Run the app with your Gemini API key to unlock real AI recipe generation:\n\n'
-          'flutter run \\\n  --dart-define=GEMINI_API_KEY=your_key\n\n'
-          'Get a free key at ai.google.dev',
+          'Connect the Fridgenie backend to unlock real AI recipes:\n\n'
+          'flutter run \\\n'
+          '  --dart-define-from-file=config/fridgenie.json\n\n'
+          'See worker/README.md for the one-time setup.',
         ),
         actions: [
           TextButton(

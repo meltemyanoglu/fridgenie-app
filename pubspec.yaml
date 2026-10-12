@@ -24,7 +24,7 @@ dependencies:
   # Real fridge photo capture (camera + library)
   image_picker: ^1.1.2
 
-  # Talk to AI vision APIs (OpenAI / Anthropic) over HTTPS
+  # Talk to the Fridgenie Worker (our AI backend) over HTTPS
   http: ^1.2.2
 
 dev_dependencies:

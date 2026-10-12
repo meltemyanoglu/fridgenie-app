@@ -280,7 +280,7 @@ class _ScanScreenState extends State<ScanScreen>
                       Text(
                         recognizer.isReal
                             ? 'Powered by ${recognizer.displayName}.'
-                            : 'Demo mode — set FRIDGENIE_BACKEND or OPENAI_API_KEY for real AI.',
+                            : 'Demo mode — connect the Fridgenie backend for real AI.',
                         style: context.text.bodyMedium,
                       ),
                       const SizedBox(height: AppSpacing.xl),

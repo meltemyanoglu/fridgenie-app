@@ -4,6 +4,8 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 
 **Who's who:** Meltem owns the UI. Bilge owns the backend work, done together with Claude (an AI assistant).
 
+👉 **Meltem, start here: [HANDOFF-for-Meltem.md](HANDOFF-for-Meltem.md)**
+
 ## Status
 
 | # | Step | Status | Commit | Log |
@@ -15,10 +17,12 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | 3 | Storage fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `9411c3b` | [04-step3-storage.md](04-step3-storage.md) |
 | 4 | Business logic fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `f8b287b` | [05-step4-business-logic.md](05-step4-business-logic.md) |
 | 4b | Independent review + fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `bfdddcf` | [06-review-fixes.md](06-review-fixes.md) |
-| 5 | Tests + CI | ✅ Done · ⚠️ Flutter job runs first on GitHub | (next commit fills this in) | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
-| 6 | Cleanup + handoff | ⏳ Next | | |
+| 5 | Tests + CI | ✅ Done · ⚠️ Flutter job runs first on GitHub | `f728770` | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
+| 6 | Cleanup + handoff | ✅ Done | (this is the latest commit) | [08-step6-cleanup-handoff.md](08-step6-cleanup-handoff.md) |
 
 Legend: ✅ done · ⏳ waiting · ⚠️ needs a human to check
+
+**Still open (needs a person):** run `flutter analyze` + `flutter test` (or wait for CI) · deploy the Worker · merge into `main` when Bilge says so.
 
 ## Timeline
 All times are Europe/Rome.
@@ -50,6 +54,8 @@ All times are Europe/Rome.
 | 2026-10-12 16:19 | All review findings fixed and committed, each with a test where possible |
 | 2026-10-12 16:20 | Step 5: GitHub CI added; the Worker job's exact commands pass locally (31 tests, bundle OK) |
 | 2026-10-12 16:21 | Step 5 committed: 61 Dart tests + 31 Worker tests now run on every push and pull request |
+| 2026-10-12 16:22 | Step 6: removed leftovers of the old in-app key setup, completed the project README, wrote the handoff page for Meltem |
+| 2026-10-12 16:23 | Step 6 committed. All planned steps are done; waiting for Bilge's `flutter analyze`/`flutter test` run, the Worker deploy, and her go-ahead to merge |
 
 ## How to read a step log
 Every step file has the same parts:

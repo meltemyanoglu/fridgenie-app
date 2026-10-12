@@ -4,7 +4,7 @@
 |---|---|
 | **When** | 2026-10-12, 16:19 – 16:21 (Europe/Rome) |
 | **Who** | Claude, for Bilge |
-| **Commit** | see the status table in [README](README.md) |
+| **Commit** | `f728770` ci: run Flutter and Worker checks on every push and pull request |
 | **Verified** | ✅ Worker CI job run locally with the exact same commands: install, 31 tests, bundle check all pass · ⚠️ the Flutter job will run for the first time on GitHub after the push |
 
 ## In one sentence
