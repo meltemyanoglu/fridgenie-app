@@ -11,9 +11,9 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | – | Analysis | ✅ Done | – | [00-analysis.md](00-analysis.md) |
 | – | Plan | ✅ Done | – | [01-plan.md](01-plan.md) |
 | 1 | Worker rewrite | ✅ Done · ⏳ not deployed | `9213696` | [02-step1-worker-rewrite.md](02-step1-worker-rewrite.md) |
-| 2 | Dart API layer | ✅ Done · ⚠️ needs `flutter analyze`/`test` | "feat(app): route all AI calls through the Worker" | [03-step2-dart-api-layer.md](03-step2-dart-api-layer.md) |
-| 3 | Storage fixes | ⏳ Next | | |
-| 4 | Business logic fixes | ⏳ | | |
+| 2 | Dart API layer | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `1bb47dc` | [03-step2-dart-api-layer.md](03-step2-dart-api-layer.md) |
+| 3 | Storage fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | (next commit fills this in) | [04-step3-storage.md](04-step3-storage.md) |
+| 4 | Business logic fixes | ⏳ Next | | |
 | 5 | Tests + CI | ⏳ | | |
 | 6 | Cleanup + handoff | ⏳ | | |
 
@@ -36,6 +36,10 @@ All times are Europe/Rome.
 | 2026-10-12 15:04 | Step 2 started: mapped every provider method the screens use, so none of them get renamed |
 | 2026-10-12 15:09 | New ingredient matcher checked in a simulation against all 28 test cases: all pass |
 | 2026-10-12 15:12 | Step 2 committed: the app now reaches the AI only through the Worker; Gemini key gone from the app |
+| 2026-10-12 15:13 | Step 3 started: one storage layer for every provider |
+| 2026-10-12 15:15 | Found that the home screen lets users pick ingredients not in their fridge, so selections must not be tied to the fridge (they were being dropped on restart) |
+| 2026-10-12 15:17 | Checked all 61 mock recipes for data that could break saving/loading: none found |
+| 2026-10-12 15:19 | Step 3 committed: instant loading, full-recipe favorites, tolerant parsing, data migration v1 → v2 |
 
 ## How to read a step log
 Every step file has the same parts:

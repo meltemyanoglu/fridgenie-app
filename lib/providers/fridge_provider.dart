@@ -1,51 +1,34 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/mock/mock_ingredients.dart';
 import '../data/models/enums.dart';
 import '../data/models/ingredient.dart';
+import '../data/storage/local_store.dart';
+import '../data/storage/storage_keys.dart';
 
+/// What's in the fridge (inventory) and what the user picked to cook with.
+/// Removing an item from the fridge also unselects it.
 class FridgeProvider extends ChangeNotifier {
-  static const _kInventoryKey = 'fridgenie.inventory';
-  static const _kSelectedKey = 'fridgenie.selected';
+  FridgeProvider(this._store) {
+    final inventory = _store.getStringList(StorageKeys.inventory);
+    // First launch gets a starter fridge; an empty saved list stays empty.
+    _inventoryIds.addAll(inventory ?? _defaultInventory);
+    // Selection is independent of inventory: the home grid offers any
+    // common ingredient, so restoring must not drop those picks.
+    final selected = _store.getStringList(StorageKeys.selected);
+    _selectedIds.addAll(selected ?? const <String>[]);
+    debugPrint('[FridgeProvider] loaded ${_inventoryIds.length} items, '
+        '${_selectedIds.length} selected');
+  }
 
   static const _defaultInventory = {
-    'eggs', 'tomato', 'cheese', 'onion', 'rice', 'olive_oil', 'garlic', 'spinach',
+    'eggs', 'tomato', 'cheese', 'onion', 'rice', 'olive_oil', 'garlic',
+    'spinach',
   };
 
+  final LocalStore _store;
   final Set<String> _inventoryIds = {};
   final Set<String> _selectedIds = {};
-  SharedPreferences? _prefs;
-
-  FridgeProvider() {
-    _load();
-  }
-
-  Future<void> _load() async {
-    _prefs = await SharedPreferences.getInstance();
-    final inv = _prefs!.getStringList(_kInventoryKey);
-    final sel = _prefs!.getStringList(_kSelectedKey);
-
-    if (inv == null) {
-      // First launch — use defaults
-      _inventoryIds.addAll(_defaultInventory);
-    } else {
-      _inventoryIds.addAll(inv);
-    }
-
-    if (sel != null) {
-      // Only restore selected IDs that are still in inventory
-      _selectedIds.addAll(sel.where(_inventoryIds.contains));
-    }
-
-    notifyListeners();
-  }
-
-  void _saveInventory() =>
-      _prefs?.setStringList(_kInventoryKey, _inventoryIds.toList());
-
-  void _saveSelected() =>
-      _prefs?.setStringList(_kSelectedKey, _selectedIds.toList());
 
   Set<String> get inventoryIds => Set.unmodifiable(_inventoryIds);
   Set<String> get selectedIds => Set.unmodifiable(_selectedIds);
@@ -63,48 +46,43 @@ class FridgeProvider extends ChangeNotifier {
   bool isSelected(String id) => _selectedIds.contains(id);
 
   void toggleInventory(String id) {
-    if (_inventoryIds.contains(id)) {
-      _inventoryIds.remove(id);
-      _selectedIds.remove(id);
-    } else {
+    if (!_inventoryIds.remove(id)) {
       _inventoryIds.add(id);
+    } else {
+      _selectedIds.remove(id);
     }
-    _saveInventory();
-    _saveSelected();
-    notifyListeners();
+    _commit();
   }
 
   void toggleSelected(String id) {
-    if (_selectedIds.contains(id)) {
-      _selectedIds.remove(id);
-    } else {
-      _selectedIds.add(id);
-    }
-    _saveSelected();
-    notifyListeners();
+    if (!_selectedIds.remove(id)) _selectedIds.add(id);
+    _commit();
   }
 
   void clearSelected() {
     _selectedIds.clear();
-    _saveSelected();
-    notifyListeners();
+    _commit();
   }
 
   void selectAll() {
     _selectedIds.addAll(_inventoryIds);
-    _saveSelected();
-    notifyListeners();
+    _commit();
   }
 
   void addManyToInventory(Iterable<String> ids) {
     _inventoryIds.addAll(ids);
-    _saveInventory();
-    notifyListeners();
+    _commit();
   }
 
   void addManyToSelection(Iterable<String> ids) {
     _selectedIds.addAll(ids);
-    _saveSelected();
+    _commit();
+  }
+
+  /// Saves both sets and notifies; every mutation goes through here.
+  void _commit() {
+    _store.setStringList(StorageKeys.inventory, _inventoryIds.toList());
+    _store.setStringList(StorageKeys.selected, _selectedIds.toList());
     notifyListeners();
   }
 }

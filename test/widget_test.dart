@@ -1,20 +1,17 @@
-// Smoke test: boots Fridgenie's splash screen and verifies the wordmark
-// renders. The default Flutter counter test was deleted because it referenced
-// a non-existent `MyApp` class.
+// Smoke test: boots Fridgenie in demo mode and checks the splash wordmark.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:fridgenie/data/storage/local_store.dart';
 import 'package:fridgenie/main.dart';
-import 'package:fridgenie/providers/user_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('Fridgenie boots and renders the wordmark on splash',
       (WidgetTester tester) async {
-    final user = UserProvider();
-    await tester.pumpWidget(FridgenieApp(userProvider: user));
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
 
-    // Pump one frame so the splash screen renders.
+    await tester.pumpWidget(FridgenieApp(store: store));
     await tester.pump();
 
     expect(find.text('Fridgenie'), findsWidgets);

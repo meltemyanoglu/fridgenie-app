@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
@@ -10,6 +9,8 @@ import 'data/services/device_id.dart';
 import 'data/services/fridgenie_api.dart';
 import 'data/services/ingredient_recognizer.dart';
 import 'data/services/worker_fridgenie_api.dart';
+import 'data/storage/local_store.dart';
+import 'data/storage/store_migrations.dart';
 import 'providers/fridge_provider.dart';
 import 'providers/grocery_provider.dart';
 import 'providers/recipe_provider.dart';
@@ -20,44 +21,44 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  // Hydrate user prefs (onboarding flag + taste profile) before first frame.
-  final userProvider = UserProvider();
-  await userProvider.hydrate();
+  // Open storage once before the first frame so every provider loads
+  // synchronously and no early tap can be lost.
+  final store = await LocalStore.open();
+  StoreMigrations.run(store);
 
-  final api = await _createApi();
-  runApp(FridgenieApp(userProvider: userProvider, api: api));
+  runApp(FridgenieApp(store: store, api: _createApi(store)));
 }
 
 /// Builds the Worker client, or returns null to run in demo mode.
-Future<FridgenieApi?> _createApi() async {
+FridgenieApi? _createApi(LocalStore store) {
   if (!AppConfig.isBackendConfigured) {
     debugPrint('[Fridgenie] Backend not configured: running in demo mode.');
     return null;
   }
-  final prefs = await SharedPreferences.getInstance();
   debugPrint('[Fridgenie] Backend: ${AppConfig.backendUri.host}');
   return WorkerFridgenieApi(
     baseUri: AppConfig.backendUri,
     appToken: AppConfig.appToken,
-    deviceId: await DeviceId.loadOrCreate(prefs),
+    deviceId: DeviceId.loadOrCreate(store),
   );
 }
 
 class FridgenieApp extends StatelessWidget {
-  final UserProvider userProvider;
+  final LocalStore store;
 
   /// Real AI client; null runs the app in demo mode (used by tests too).
   final FridgenieApi? api;
 
-  const FridgenieApp({super.key, required this.userProvider, this.api});
+  const FridgenieApp({super.key, required this.store, this.api});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<UserProvider>.value(value: userProvider),
-        ChangeNotifierProvider(create: (_) => FridgeProvider()),
-        ChangeNotifierProvider(create: (_) => GroceryProvider()),
+        Provider<LocalStore>.value(value: store),
+        ChangeNotifierProvider(create: (_) => UserProvider(store)),
+        ChangeNotifierProvider(create: (_) => FridgeProvider(store)),
+        ChangeNotifierProvider(create: (_) => GroceryProvider(store)),
 
         // Offline recipe brain: suggestions, fallbacks, tips.
         Provider<AIService>(create: (_) => AIService()),
@@ -76,6 +77,7 @@ class FridgenieApp extends StatelessWidget {
           create: (ctx) => RecipeProvider(
             aiService: ctx.read<AIService>(),
             userProvider: ctx.read<UserProvider>(),
+            store: store,
             api: ctx.read<FridgenieApi?>(),
           ),
         ),

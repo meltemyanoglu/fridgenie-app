@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'package:flutter/material.dart' show Color;
-
 import '../models/enums.dart';
 import '../models/recipe.dart';
 import 'ingredient_matcher.dart';
@@ -30,7 +28,7 @@ class RecipeMapper {
       tagline: _string(json['tagline'], ''),
       emoji: _string(json['emoji'], '🍽️'),
       photoUrl: _photoFor(category),
-      gradientColors: gradientFor(category),
+      gradientColors: Recipe.gradientFor(category),
       category: category,
       difficulty: _enum(json['difficulty'], DifficultyLevel.values) ??
           DifficultyLevel.easy,
@@ -55,16 +53,6 @@ class RecipeMapper {
       tags: _strings(json['tags']).ifEmpty('ai-generated'),
     );
   }
-
-  /// Card gradient per category; shared so every recipe looks consistent.
-  static List<Color> gradientFor(RecipeCategory category) =>
-      switch (category) {
-        RecipeCategory.comfort => const [Color(0xFFFFE7B8), Color(0xFFFFB088)],
-        RecipeCategory.healthy => const [Color(0xFF8AD49C), Color(0xFF3DA35D)],
-        RecipeCategory.quick => const [Color(0xFFFFD23F), Color(0xFFFFA630)],
-        RecipeCategory.budget => const [Color(0xFFFFD23F), Color(0xFF8AD49C)],
-        RecipeCategory.useItUp => const [Color(0xFFE5854A), Color(0xFFFF6B6B)],
-      };
 
   static const Map<RecipeCategory, List<String>> _photoIds = {
     RecipeCategory.comfort: [

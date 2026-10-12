@@ -1,127 +1,92 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models/badge.dart';
 import '../data/models/enums.dart';
 import '../data/models/user_profile.dart';
+import '../data/storage/local_store.dart';
+import '../data/storage/storage_keys.dart';
 
 class UserProvider extends ChangeNotifier {
+  UserProvider(this._store) {
+    _onboardingDone = _store.getBool(StorageKeys.onboardingDone) ?? false;
+    _profile = _loadProfile();
+    debugPrint('$_tag loaded profile "${_profile.name}", '
+        'onboarding ${_onboardingDone ? 'done' : 'pending'}');
+  }
+
+  static const _tag = '[UserProvider]';
+
+  final LocalStore _store;
   UserProfile _profile = const UserProfile();
   bool _onboardingDone = false;
 
   UserProfile get profile => _profile;
   bool get onboardingDone => _onboardingDone;
 
-  // ── Persistence keys ────────────────────────────────────────────────────
-  static const _kOnboardingDone    = 'fridgenie.onboarding_done';
-  static const _kName              = 'fridgenie.name';
-  static const _kDietary           = 'fridgenie.dietary';
-  static const _kSkill             = 'fridgenie.skill';
-  static const _kCuisines          = 'fridgenie.cuisines';
-  static const _kMood              = 'fridgenie.mood';
-  static const _kAvatarEmoji       = 'fridgenie.avatar_emoji';
-  static const _kAvatarBgColor     = 'fridgenie.avatar_bg_color';
-  static const _kRecipesCooked     = 'fridgenie.recipes_cooked';
-  static const _kCurrentStreak     = 'fridgenie.current_streak';
-  static const _kLongestStreak     = 'fridgenie.longest_streak';
+  /// Reads the saved profile; unknown enum names are skipped, not defaulted.
+  UserProfile _loadProfile() {
+    const defaults = UserProfile();
+    final dietary = _names(StorageKeys.dietary, DietaryPreference.values);
+    final cuisines = _names(StorageKeys.cuisines, CuisineType.values);
 
-  /// Hydrate state from SharedPreferences. Call once at app start.
-  Future<void> hydrate() async {
-    final p = await SharedPreferences.getInstance();
-    _onboardingDone = p.getBool(_kOnboardingDone) ?? false;
-    final name = p.getString(_kName) ?? _profile.name;
-    final dietaryNames = p.getStringList(_kDietary);
-    final skillName = p.getString(_kSkill);
-    final cuisineNames = p.getStringList(_kCuisines);
-    final moodName = p.getString(_kMood);
-
-    final dietary = dietaryNames == null
-        ? _profile.dietary
-        : dietaryNames
-            .map((n) => DietaryPreference.values
-                .firstWhere((e) => e.name == n, orElse: () => DietaryPreference.noRestrictions))
-            .toSet();
-
-    final skill = skillName == null
-        ? _profile.skill
-        : CookingSkill.values.firstWhere(
-            (e) => e.name == skillName,
-            orElse: () => CookingSkill.comfortable,
-          );
-
-    final cuisines = cuisineNames == null
-        ? _profile.favoriteCuisines
-        : cuisineNames
-            .map((n) => CuisineType.values
-                .firstWhere((e) => e.name == n, orElse: () => CuisineType.italian))
-            .toSet();
-
-    final mood = moodName == null
-        ? _profile.defaultMood
-        : Mood.values.firstWhere(
-            (e) => e.name == moodName,
-            orElse: () => Mood.cozy,
-          );
-
-    final avatarEmoji    = p.getString(_kAvatarEmoji);
-    final avatarBgColor  = p.getInt(_kAvatarBgColor);
-    final recipesCooked  = p.getInt(_kRecipesCooked) ?? 0;
-    final currentStreak  = p.getInt(_kCurrentStreak) ?? 0;
-    final longestStreak  = p.getInt(_kLongestStreak) ?? 0;
-
-    _profile = _profile.copyWith(
-      name: name,
-      dietary: dietary,
-      skill: skill,
-      favoriteCuisines: cuisines,
-      defaultMood: mood,
-      avatarEmoji: avatarEmoji,
-      avatarBgColor: avatarBgColor,
-      recipesCooked: recipesCooked,
-      currentStreak: currentStreak,
-      longestStreak: longestStreak,
+    return defaults.copyWith(
+      name: _store.getString(StorageKeys.name),
+      dietary: dietary == null || dietary.isEmpty ? null : dietary,
+      skill: _name(StorageKeys.skill, CookingSkill.values),
+      favoriteCuisines: cuisines == null || cuisines.isEmpty ? null : cuisines,
+      defaultMood: _name(StorageKeys.mood, Mood.values),
+      avatarEmoji: _store.getString(StorageKeys.avatarEmoji),
+      avatarBgColor: _store.getInt(StorageKeys.avatarBgColor),
+      recipesCooked: _store.getInt(StorageKeys.recipesCooked),
+      currentStreak: _store.getInt(StorageKeys.currentStreak),
+      longestStreak: _store.getInt(StorageKeys.longestStreak),
     );
-    notifyListeners();
   }
 
-  Future<void> _persistProfile() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_kName, _profile.name);
-    await p.setStringList(
-      _kDietary,
-      _profile.dietary.map((e) => e.name).toList(),
-    );
-    await p.setString(_kSkill, _profile.skill.name);
-    await p.setStringList(
-      _kCuisines,
-      _profile.favoriteCuisines.map((e) => e.name).toList(),
-    );
-    await p.setString(_kMood, _profile.defaultMood.name);
-    if (_profile.avatarEmoji != null) {
-      await p.setString(_kAvatarEmoji, _profile.avatarEmoji!);
-    } else {
-      await p.remove(_kAvatarEmoji);
-    }
-    if (_profile.avatarBgColor != null) {
-      await p.setInt(_kAvatarBgColor, _profile.avatarBgColor!);
-    } else {
-      await p.remove(_kAvatarBgColor);
-    }
-    await p.setInt(_kRecipesCooked, _profile.recipesCooked);
-    await p.setInt(_kCurrentStreak, _profile.currentStreak);
-    await p.setInt(_kLongestStreak, _profile.longestStreak);
+  T? _name<T extends Enum>(String key, List<T> values) {
+    final stored = _store.getString(key);
+    return values.where((v) => v.name == stored).firstOrNull;
+  }
+
+  Set<T>? _names<T extends Enum>(String key, List<T> values) {
+    final stored = _store.getStringList(key);
+    if (stored == null) return null;
+    return values.where((v) => stored.contains(v.name)).toSet();
+  }
+
+  /// Writes every profile field; called after any profile change.
+  void _persistProfile() {
+    final p = _profile;
+    _store.setString(StorageKeys.name, p.name);
+    _store.setStringList(
+        StorageKeys.dietary, p.dietary.map((e) => e.name).toList());
+    _store.setString(StorageKeys.skill, p.skill.name);
+    _store.setStringList(
+        StorageKeys.cuisines, p.favoriteCuisines.map((e) => e.name).toList());
+    _store.setString(StorageKeys.mood, p.defaultMood.name);
+    final emoji = p.avatarEmoji;
+    emoji == null
+        ? _store.remove(StorageKeys.avatarEmoji)
+        : _store.setString(StorageKeys.avatarEmoji, emoji);
+    final color = p.avatarBgColor;
+    color == null
+        ? _store.remove(StorageKeys.avatarBgColor)
+        : _store.setInt(StorageKeys.avatarBgColor, color);
+    _store.setInt(StorageKeys.recipesCooked, p.recipesCooked);
+    _store.setInt(StorageKeys.currentStreak, p.currentStreak);
+    _store.setInt(StorageKeys.longestStreak, p.longestStreak);
   }
 
   Future<void> setAvatarEmoji(String emoji) async {
     _profile = _profile.copyWith(avatarEmoji: emoji);
+    _persistProfile();
     notifyListeners();
-    await _persistProfile();
   }
 
   Future<void> setAvatarBgColor(int colorValue) async {
     _profile = _profile.copyWith(avatarBgColor: colorValue);
+    _persistProfile();
     notifyListeners();
-    await _persistProfile();
   }
 
   // ── Onboarding state mutators ──────────────────────────────────────────
@@ -150,19 +115,20 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Saves the answers collected during onboarding.
   Future<void> completeOnboarding() async {
     _onboardingDone = true;
-    final p = await SharedPreferences.getInstance();
-    await p.setBool(_kOnboardingDone, true);
-    await _persistProfile();
+    _store.setBool(StorageKeys.onboardingDone, true);
+    _persistProfile();
+    debugPrint('$_tag onboarding completed');
     notifyListeners();
   }
 
-  /// Wipe stored profile + onboarding flag (used by "restart onboarding").
+  /// Shows onboarding again; the profile is kept and pre-fills the answers.
   Future<void> resetOnboarding() async {
     _onboardingDone = false;
-    final p = await SharedPreferences.getInstance();
-    await p.setBool(_kOnboardingDone, false);
+    _store.setBool(StorageKeys.onboardingDone, false);
+    debugPrint('$_tag onboarding reset');
     notifyListeners();
   }
 

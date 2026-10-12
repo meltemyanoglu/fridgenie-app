@@ -4,7 +4,7 @@
 |---|---|
 | **When** | 2026-10-12, 15:04 – 15:12 (Europe/Rome) |
 | **Who** | Claude, for Bilge |
-| **Commit** | see `git log` → "feat(app): route all AI calls through the Worker" |
+| **Commit** | `1bb47dc` feat(app): route all AI calls through the Worker |
 | **Verified** | ✅ ingredient matching logic simulated against all 28 test cases · ⚠️ Dart code **not compiled yet**: run `flutter analyze` and `flutter test` |
 
 ## In one sentence

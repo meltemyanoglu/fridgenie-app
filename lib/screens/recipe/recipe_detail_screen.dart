@@ -83,7 +83,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     );
                     return;
                   }
-                  recipeProv.toggleFavorite(r.id, title: r.title);
+                  recipeProv.toggleFavorite(r);
                 },
               ),
               const SizedBox(width: 8),

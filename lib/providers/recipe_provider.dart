@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/mock/mock_ingredients.dart';
 import '../data/mock/mock_recipes.dart';
@@ -9,6 +6,8 @@ import '../data/models/enums.dart';
 import '../data/models/recipe.dart';
 import '../data/services/ai_service.dart';
 import '../data/services/fridgenie_api.dart';
+import '../data/storage/local_store.dart';
+import '../data/storage/storage_keys.dart';
 import 'user_provider.dart';
 
 enum RequestState { idle, loading, success, error }
@@ -18,6 +17,7 @@ class RecipeProvider extends ChangeNotifier {
 
   final AIService _ai;
   final UserProvider _userProvider;
+  final LocalStore _store;
 
   /// Null when the backend isn't configured; the app then runs in demo mode.
   final FridgenieApi? _api;
@@ -25,11 +25,21 @@ class RecipeProvider extends ChangeNotifier {
   RecipeProvider({
     required AIService aiService,
     required UserProvider userProvider,
+    required LocalStore store,
     FridgenieApi? api,
   })  : _ai = aiService,
         _userProvider = userProvider,
+        _store = store,
         _api = api {
-    _loadFavorites();
+    _generatedRecipes.addAll(store
+        .readJsonList(StorageKeys.generatedRecipes, Recipe.fromJson)
+        .take(_maxGenerated));
+    for (final recipe
+        in store.readJsonList(StorageKeys.favoriteRecipes, Recipe.fromJson)) {
+      _favorites[recipe.id] = recipe;
+    }
+    debugPrint('$_tag loaded ${_generatedRecipes.length} generated, '
+        '${_favorites.length} favorites');
   }
 
   /// True when real AI (Gemini via the Worker) is available.
@@ -216,147 +226,60 @@ class RecipeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Favorites — persisted to SharedPreferences ─────────────────────────
-  final Set<String> _favorites = {};
-  // id → title cache so duplicate check works even across sessions
-  final Map<String, String> _favoriteTitles = {};
+  // ── Favorites (full recipe snapshots, so they never disappear) ─────────
+  /// Keyed by recipe id, in the order they were added.
+  final Map<String, Recipe> _favorites = {};
 
-  bool isFavorite(String id) => _favorites.contains(id);
-  Set<String> get favorites => Set.unmodifiable(_favorites);
+  bool isFavorite(String id) => _favorites.containsKey(id);
+  Set<String> get favorites => Set.unmodifiable(_favorites.keys);
 
-  SharedPreferences? _prefs;
-
-  static const _kFavoritesKey = 'fridgenie.favorites';
-  static const _kFavoriteTitlesKey = 'fridgenie.favorite_titles';
-  static const _kGeneratedKey = 'fridgenie.generated_recipes';
-  static const _kMaxGenerated = 50;
-
-  Future<void> _loadFavorites() async {
-    _prefs = await SharedPreferences.getInstance();
-    final saved = _prefs!.getStringList(_kFavoritesKey) ?? [];
-    _favorites.addAll(saved);
-    _loadGeneratedRecipesFromPrefs();
-    _loadFavoriteTitlesFromPrefs();
-    _deduplicateFavorites();
+  /// Adds or removes [recipe]; the full recipe is stored, not just its id.
+  void toggleFavorite(Recipe recipe) {
+    final removed = _favorites.remove(recipe.id) != null;
+    if (!removed) _favorites[recipe.id] = recipe;
+    debugPrint('$_tag ${removed ? 'unfavorited' : 'favorited'} '
+        '"${recipe.title}" (${_favorites.length} favorites)');
+    _saveFavorites();
     notifyListeners();
   }
 
-  void _loadGeneratedRecipesFromPrefs() {
-    final raw = _prefs?.getString(_kGeneratedKey);
-    if (raw == null) return;
-    try {
-      final list = jsonDecode(raw) as List;
-      _generatedRecipes.clear();
-      for (final item in list) {
-        _generatedRecipes.add(Recipe.fromJson(item as Map<String, dynamic>));
-      }
-    } catch (_) {}
+  /// True if a *different* favorite already has the same title.
+  bool isTitleAlreadySaved(String id, String title) {
+    final key = _titleKey(title);
+    return _favorites.values
+        .any((r) => r.id != id && _titleKey(r.title) == key);
   }
 
-  void _loadFavoriteTitlesFromPrefs() {
-    final raw = _prefs?.getString(_kFavoriteTitlesKey);
-    if (raw == null) return;
-    try {
-      final map = jsonDecode(raw) as Map<String, dynamic>;
-      map.forEach((k, v) => _favoriteTitles[k] = v as String);
-    } catch (_) {}
-  }
+  void _saveFavorites() => _store.setJson(
+        StorageKeys.favoriteRecipes,
+        _favorites.values.map((r) => r.toJson()).toList(),
+      );
 
-  /// Remove orphaned IDs (recipe not found anywhere) and title-duplicates.
-  void _deduplicateFavorites() {
-    final seenTitles = <String>{};
-    final toRemove = <String>[];
-    for (final id in _favorites.toList()) {
-      final title = _favoriteTitles[id] ?? recipeByIdOrNull(id)?.title;
-      if (title == null) {
-        // Can't resolve this recipe — orphan, remove it.
-        toRemove.add(id);
-        continue;
-      }
-      final key = title.trim().toLowerCase();
-      if (seenTitles.contains(key)) {
-        toRemove.add(id);
-      } else {
-        seenTitles.add(key);
-      }
-    }
-    if (toRemove.isEmpty) return;
-    for (final id in toRemove) {
-      _favorites.remove(id);
-      _favoriteTitles.remove(id);
-    }
-    _saveFavorites();
-    _saveFavoriteTitles();
-  }
+  static String _titleKey(String title) => title.trim().toLowerCase();
 
-  void _saveFavorites() {
-    _prefs?.setStringList(_kFavoritesKey, _favorites.toList());
-  }
-
-  void _saveFavoriteTitles() {
-    _prefs?.setString(_kFavoriteTitlesKey, jsonEncode(_favoriteTitles));
-  }
-
-  void _saveGeneratedRecipes() {
-    final toSave = _generatedRecipes.take(_kMaxGenerated).toList();
-    _prefs?.setString(
-      _kGeneratedKey,
-      jsonEncode(toSave.map((r) => r.toJson()).toList()),
-    );
-  }
-
-  void toggleFavorite(String id, {String? title}) {
-    if (_favorites.contains(id)) {
-      _favorites.remove(id);
-      _favoriteTitles.remove(id);
-    } else {
-      _favorites.add(id);
-      if (title != null) _favoriteTitles[id] = title;
-    }
-    notifyListeners();
-    _saveFavorites();
-    _saveFavoriteTitles();
-  }
-
-  // ── Generated recipes (Gemini / mock) ──────────────────────────────────
+  // ── Generated recipes (real AI only, newest first) ─────────────────────
+  static const _maxGenerated = 50;
   final List<Recipe> _generatedRecipes = [];
   List<Recipe> get generatedRecipes => List.unmodifiable(_generatedRecipes);
 
-  Recipe? generatedById(String id) {
-    for (final r in _generatedRecipes) {
-      if (r.id == id) return r;
-    }
-    return null;
-  }
+  Recipe? generatedById(String id) =>
+      _generatedRecipes.where((r) => r.id == id).firstOrNull;
 
-  Recipe? recipeByIdOrNull(String id) {
-    final gen = generatedById(id);
-    if (gen != null) return gen;
-    try {
-      return MockRecipes.all.firstWhere((r) => r.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// True if a *different* favorited recipe already has the same title.
-  bool isTitleAlreadySaved(String id, String title) {
-    final normalised = title.trim().toLowerCase();
-    for (final favId in _favorites) {
-      if (favId == id) continue;
-      // Check persisted title map first (works across sessions)
-      final saved = _favoriteTitles[favId];
-      if (saved != null && saved.trim().toLowerCase() == normalised) return true;
-      // Fallback: live recipe lookup
-      final r = recipeByIdOrNull(favId);
-      if (r != null && r.title.trim().toLowerCase() == normalised) return true;
-    }
-    return false;
-  }
+  /// Finds a recipe anywhere: AI-generated, favorites, then the mock catalog.
+  Recipe? recipeByIdOrNull(String id) =>
+      generatedById(id) ??
+      _favorites[id] ??
+      MockRecipes.all.where((r) => r.id == id).firstOrNull;
 
   void addGeneratedRecipe(Recipe recipe) {
     _generatedRecipes.insert(0, recipe);
-    _saveGeneratedRecipes();
+    if (_generatedRecipes.length > _maxGenerated) {
+      _generatedRecipes.removeRange(_maxGenerated, _generatedRecipes.length);
+    }
+    _store.setJson(
+      StorageKeys.generatedRecipes,
+      _generatedRecipes.map((r) => r.toJson()).toList(),
+    );
     notifyListeners();
   }
 
@@ -373,15 +296,16 @@ class RecipeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A right swipe also favorites the card, unless that title is saved.
   void swipe({required bool liked}) {
     if (_swipeDeck.isEmpty) return;
     final card = _swipeDeck.removeAt(0);
     if (liked) {
       _liked.add(card.id);
-      _favorites.add(card.id);
-      _favoriteTitles[card.id] = card.title;
-      _saveFavorites();
-      _saveFavoriteTitles();
+      if (!isFavorite(card.id) && !isTitleAlreadySaved(card.id, card.title)) {
+        _favorites[card.id] = card;
+        _saveFavorites();
+      }
     } else {
       _passed.add(card.id);
     }

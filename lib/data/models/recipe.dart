@@ -15,6 +15,9 @@ class NutritionInfo {
     required this.fatG,
   });
 
+  static const empty =
+      NutritionInfo(calories: 0, proteinG: 0, carbsG: 0, fatG: 0);
+
   Map<String, dynamic> toJson() => {
         'calories': calories,
         'proteinG': proteinG,
@@ -22,11 +25,12 @@ class NutritionInfo {
         'fatG': fatG,
       };
 
+  /// Lenient: missing or non-numeric values become 0.
   factory NutritionInfo.fromJson(Map<String, dynamic> j) => NutritionInfo(
-        calories: (j['calories'] as num).toInt(),
-        proteinG: (j['proteinG'] as num).toInt(),
-        carbsG: (j['carbsG'] as num).toInt(),
-        fatG: (j['fatG'] as num).toInt(),
+        calories: _int(j['calories']) ?? 0,
+        proteinG: _int(j['proteinG']) ?? 0,
+        carbsG: _int(j['carbsG']) ?? 0,
+        fatG: _int(j['fatG']) ?? 0,
       );
 }
 
@@ -44,9 +48,9 @@ class RecipeStep {
       };
 
   factory RecipeStep.fromJson(Map<String, dynamic> j) => RecipeStep(
-        order: (j['order'] as num).toInt(),
-        text: j['text'] as String,
-        minutes: j['minutes'] != null ? (j['minutes'] as num).toInt() : null,
+        order: _int(j['order']) ?? 0,
+        text: _string(j['text']) ?? '',
+        minutes: _int(j['minutes']),
       );
 }
 
@@ -68,9 +72,9 @@ class Substitution {
       };
 
   factory Substitution.fromJson(Map<String, dynamic> j) => Substitution(
-        missing: j['missing'] as String,
-        swap: j['swap'] as String,
-        reason: j['reason'] as String,
+        missing: _string(j['missing']) ?? '',
+        swap: _string(j['swap']) ?? '',
+        reason: _string(j['reason']) ?? '',
       );
 }
 
@@ -127,6 +131,15 @@ class Recipe {
     required this.tags,
   });
 
+  /// Card gradient per category, used whenever a recipe has no valid colors.
+  static List<Color> gradientFor(RecipeCategory category) => switch (category) {
+        RecipeCategory.comfort => const [Color(0xFFFFE7B8), Color(0xFFFFB088)],
+        RecipeCategory.healthy => const [Color(0xFF8AD49C), Color(0xFF3DA35D)],
+        RecipeCategory.quick => const [Color(0xFFFFD23F), Color(0xFFFFA630)],
+        RecipeCategory.budget => const [Color(0xFFFFD23F), Color(0xFF8AD49C)],
+        RecipeCategory.useItUp => const [Color(0xFFE5854A), Color(0xFFFF6B6B)],
+      };
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
@@ -151,59 +164,86 @@ class Recipe {
         'tags': tags,
       };
 
-  factory Recipe.fromJson(Map<String, dynamic> j) => Recipe(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        tagline: (j['tagline'] as String?) ?? '',
-        emoji: (j['emoji'] as String?) ?? '🍽️',
-        photoUrl: (j['photoUrl'] as String?) ?? '',
-        gradientColors: ((j['gradientColors'] as List?) ?? [])
-            .map((v) => Color(v as int))
-            .toList(),
-        category: RecipeCategory.values.firstWhere(
-          (e) => e.name == j['category'],
-          orElse: () => RecipeCategory.comfort,
-        ),
-        difficulty: DifficultyLevel.values.firstWhere(
-          (e) => e.name == j['difficulty'],
-          orElse: () => DifficultyLevel.easy,
-        ),
-        cookMinutes: (j['cookMinutes'] as num?)?.toInt() ?? 0,
-        servings: (j['servings'] as num?)?.toInt() ?? 2,
-        nutrition: j['nutrition'] != null
-            ? NutritionInfo.fromJson(j['nutrition'] as Map<String, dynamic>)
-            : const NutritionInfo(calories: 0, proteinG: 0, carbsG: 0, fatG: 0),
-        requiredIngredientIds:
-            List<String>.from((j['requiredIngredientIds'] as List?) ?? []),
-        optionalIngredientIds:
-            List<String>.from((j['optionalIngredientIds'] as List?) ?? []),
-        extraIngredientNames:
-            List<String>.from((j['extraIngredientNames'] as List?) ?? []),
-        steps: ((j['steps'] as List?) ?? [])
-            .map((s) => RecipeStep.fromJson(s as Map<String, dynamic>))
-            .toList(),
-        substitutions: ((j['substitutions'] as List?) ?? [])
-            .map((s) => Substitution.fromJson(s as Map<String, dynamic>))
-            .toList(),
-        matchingMoods: ((j['matchingMoods'] as List?) ?? [])
-            .map((m) => Mood.values.firstWhere(
-                  (e) => e.name == m,
-                  orElse: () => Mood.cozy,
-                ))
-            .toList(),
-        cuisines: ((j['cuisines'] as List?) ?? [])
-            .map((c) => CuisineType.values.firstWhere(
-                  (e) => e.name == c,
-                  orElse: () => CuisineType.italian,
-                ))
-            .toList(),
-        dietaryFits: ((j['dietaryFits'] as List?) ?? [])
-            .map((d) => DietaryPreference.values.firstWhere(
-                  (e) => e.name == d,
-                  orElse: () => DietaryPreference.noRestrictions,
-                ))
-            .toList(),
-        whyRecommended: (j['whyRecommended'] as String?) ?? '',
-        tags: List<String>.from((j['tags'] as List?) ?? []),
-      );
+  /// Lenient parser for stored recipes: unknown values get safe defaults.
+  /// Throws [FormatException] only when `id` or `title` is missing.
+  factory Recipe.fromJson(Map<String, dynamic> j) {
+    final id = _string(j['id']);
+    final title = _string(j['title']);
+    if (id == null || id.isEmpty || title == null || title.isEmpty) {
+      throw const FormatException('Recipe JSON needs an id and a title.');
+    }
+
+    final category =
+        _enum(j['category'], RecipeCategory.values) ?? RecipeCategory.comfort;
+    final colors = _list(j['gradientColors'])
+        .whereType<int>()
+        .map((value) => Color(value))
+        .toList();
+    final nutrition = j['nutrition'];
+
+    return Recipe(
+      id: id,
+      title: title,
+      tagline: _string(j['tagline']) ?? '',
+      emoji: _string(j['emoji']) ?? '🍽️',
+      photoUrl: _string(j['photoUrl']) ?? '',
+      gradientColors: colors.length >= 2 ? colors : gradientFor(category),
+      category: category,
+      difficulty: _enum(j['difficulty'], DifficultyLevel.values) ??
+          DifficultyLevel.easy,
+      cookMinutes: _int(j['cookMinutes']) ?? 0,
+      servings: _int(j['servings']) ?? 2,
+      nutrition: nutrition is Map
+          ? NutritionInfo.fromJson(Map<String, dynamic>.from(nutrition))
+          : NutritionInfo.empty,
+      requiredIngredientIds: _strings(j['requiredIngredientIds']),
+      optionalIngredientIds: _strings(j['optionalIngredientIds']),
+      extraIngredientNames: _strings(j['extraIngredientNames']),
+      steps: _renumbered(_maps(j['steps'])
+          .map(RecipeStep.fromJson)
+          .where((s) => s.text.isNotEmpty)),
+      substitutions: _maps(j['substitutions'])
+          .map(Substitution.fromJson)
+          .where((s) => s.missing.isNotEmpty && s.swap.isNotEmpty)
+          .toList(),
+      matchingMoods: _enums(j['matchingMoods'], Mood.values),
+      cuisines: _enums(j['cuisines'], CuisineType.values),
+      dietaryFits: _enums(j['dietaryFits'], DietaryPreference.values),
+      whyRecommended: _string(j['whyRecommended']) ?? '',
+      tags: _strings(j['tags']),
+    );
+  }
 }
+
+// ── Lenient JSON helpers shared by the models in this file ────────────────
+
+int? _int(Object? value) =>
+    value is num && value.isFinite ? value.round() : null;
+
+String? _string(Object? value) => value is String ? value : null;
+
+List<Object?> _list(Object? value) => value is List ? value : const [];
+
+List<String> _strings(Object? value) =>
+    _list(value).whereType<String>().toList();
+
+List<Map<String, dynamic>> _maps(Object? value) => _list(value)
+    .whereType<Map>()
+    .map((m) => Map<String, dynamic>.from(m))
+    .toList();
+
+T? _enum<T extends Enum>(Object? value, List<T> values) {
+  for (final candidate in values) {
+    if (candidate.name == value) return candidate;
+  }
+  return null;
+}
+
+/// Renumbers steps 1..n so a gap or a missing order never shows in the UI.
+List<RecipeStep> _renumbered(Iterable<RecipeStep> steps) => [
+      for (final (index, step) in steps.indexed)
+        RecipeStep(order: index + 1, text: step.text, minutes: step.minutes),
+    ];
+
+List<T> _enums<T extends Enum>(Object? value, List<T> values) =>
+    _list(value).map((v) => _enum(v, values)).whereType<T>().toList();

@@ -1,17 +1,23 @@
-import 'dart:convert';
-
+/// One line on the shopping list; immutable, so change it with [copyWith].
 class GroceryItem {
   final String id;
   final String name;
   final String emoji;
-  bool isChecked;
+  final bool isChecked;
 
-  GroceryItem({
+  const GroceryItem({
     required this.id,
     required this.name,
     required this.emoji,
     this.isChecked = false,
   });
+
+  GroceryItem copyWith({bool? isChecked}) => GroceryItem(
+        id: id,
+        name: name,
+        emoji: emoji,
+        isChecked: isChecked ?? this.isChecked,
+      );
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -20,18 +26,19 @@ class GroceryItem {
         'isChecked': isChecked,
       };
 
-  factory GroceryItem.fromJson(Map<String, dynamic> j) => GroceryItem(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        emoji: (j['emoji'] as String?) ?? '🛒',
-        isChecked: (j['isChecked'] as bool?) ?? false,
-      );
-
-  static List<GroceryItem> listFromJson(String raw) {
-    final list = jsonDecode(raw) as List;
-    return list.map((e) => GroceryItem.fromJson(e as Map<String, dynamic>)).toList();
+  /// Throws [FormatException] when `id` or `name` is missing.
+  factory GroceryItem.fromJson(Map<String, dynamic> j) {
+    final id = j['id'];
+    final name = j['name'];
+    if (id is! String || name is! String || name.trim().isEmpty) {
+      throw const FormatException('Grocery item needs an id and a name.');
+    }
+    final emoji = j['emoji'];
+    return GroceryItem(
+      id: id,
+      name: name,
+      emoji: emoji is String && emoji.isNotEmpty ? emoji : '🛒',
+      isChecked: j['isChecked'] == true,
+    );
   }
-
-  static String listToJson(List<GroceryItem> items) =>
-      jsonEncode(items.map((i) => i.toJson()).toList());
 }
