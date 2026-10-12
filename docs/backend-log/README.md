@@ -18,7 +18,7 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | 4 | Business logic fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `f8b287b` | [05-step4-business-logic.md](05-step4-business-logic.md) |
 | 4b | Independent review + fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `bfdddcf` | [06-review-fixes.md](06-review-fixes.md) |
 | 5 | Tests + CI | ✅ Done · ⚠️ Flutter job runs first on GitHub | `f728770` | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
-| 6 | Cleanup + handoff | ✅ Done | (this is the latest commit) | [08-step6-cleanup-handoff.md](08-step6-cleanup-handoff.md) |
+| 6 | Cleanup + handoff | ✅ Done | `72c3553` | [08-step6-cleanup-handoff.md](08-step6-cleanup-handoff.md) |
 
 Legend: ✅ done · ⏳ waiting · ⚠️ needs a human to check
 
@@ -56,6 +56,7 @@ All times are Europe/Rome.
 | 2026-10-12 16:21 | Step 5 committed: 61 Dart tests + 31 Worker tests now run on every push and pull request |
 | 2026-10-12 16:22 | Step 6: removed leftovers of the old in-app key setup, completed the project README, wrote the handoff page for Meltem |
 | 2026-10-12 16:23 | Step 6 committed. All planned steps are done; waiting for Bilge's `flutter analyze`/`flutter test` run, the Worker deploy, and her go-ahead to merge |
+| 2026-10-12 16:24 | GitHub access for Claude was granted: all 8 commits pushed to `bilge-changes` (`9811d3e..72c3553`). `main` untouched. CI starts on GitHub with this push |
 
 ## How to read a step log
 Every step file has the same parts:

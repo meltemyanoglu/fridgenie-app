@@ -17,7 +17,7 @@ Hi Meltem! Bilge reworked the backend side of Fridgenie, together with Claude. Y
    flutter run --dart-define-from-file=config/fridgenie.json
    ```
    Without that flag the app runs in **demo mode**, exactly like before.
-4. **Optional:** install the [Claude GitHub App](https://github.com/apps/claude/installations/select_target) on the repo, so Claude can push to `bilge-changes` directly next time.
+4. **Check the Actions tab** on GitHub: the first CI run on `bilge-changes` shows whether `flutter analyze` and `flutter test` pass.
 
 ## Changes inside your screens (all small)
 | File | What changed | Why |
