@@ -71,7 +71,7 @@ A badge is stamped with the day it was earned and **never gets un-earned**. The 
 | `home_screen.dart` | tip of the day from the shared `AIService` |
 
 ## For Meltem
-- The "Cooked! Streak +1 🔥" snackbar is shown every time, even when the streak didn't grow (second cook of the day). `markCooked` returns a `CookResult`, so the message could be `result.streakIncreased ? 'Streak +1 🔥' : 'Cooked! 🍳'`, plus a 🎉 for `result.newBadges`.
+- ~~The "Cooked! Streak +1 🔥" snackbar is shown every time.~~ **Done in [06](06-review-fixes.md):** it now shows the real streak and any new badge.
 - New loading states (`moodState`, `surpriseState`, `challengeState`, `rescueState`) are available if you want spinners or error messages on those screens.
 - "Waste saved (kg)" on the profile is always 0: nothing calculates it yet. **Open product decision**: how should it be estimated? Until then, consider hiding it.
 

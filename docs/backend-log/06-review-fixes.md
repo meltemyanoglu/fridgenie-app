@@ -4,7 +4,7 @@
 |---|---|
 | **When** | 2026-10-12, 15:27 – 16:19 (Europe/Rome) |
 | **Who** | Review by a separate Claude agent that had not written the code; fixes by Claude, for Bilge |
-| **Commit** | see the status table in [README](README.md) |
+| **Commit** | `bfdddcf` fix(app): address independent review findings |
 | **Verified** | ✅ reviewer checked every changed call site and hand-traced every test against the mock data: **no compile errors found**, all test expectations hold · ⚠️ still needs a real `flutter analyze` / `flutter test` run |
 
 ## In one sentence

@@ -14,9 +14,9 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | 2 | Dart API layer | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `1bb47dc` | [03-step2-dart-api-layer.md](03-step2-dart-api-layer.md) |
 | 3 | Storage fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `9411c3b` | [04-step3-storage.md](04-step3-storage.md) |
 | 4 | Business logic fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `f8b287b` | [05-step4-business-logic.md](05-step4-business-logic.md) |
-| 4b | Independent review + fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | (next commit fills this in) | [06-review-fixes.md](06-review-fixes.md) |
-| 5 | Tests + CI | ⏳ Next | | |
-| 6 | Cleanup + handoff | ⏳ | | |
+| 4b | Independent review + fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `bfdddcf` | [06-review-fixes.md](06-review-fixes.md) |
+| 5 | Tests + CI | ✅ Done · ⚠️ Flutter job runs first on GitHub | (next commit fills this in) | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
+| 6 | Cleanup + handoff | ⏳ Next | | |
 
 Legend: ✅ done · ⏳ waiting · ⚠️ needs a human to check
 
@@ -48,6 +48,8 @@ All times are Europe/Rome.
 | 2026-10-12 15:27 | Independent review started: a separate agent reads all Dart changes like a compiler, since Flutter can't run here |
 | 2026-10-12 16:16 | Review back: **0 compile errors**, all test expectations confirmed; 1 broken smoke test, 4 bugs, 5 minor issues found |
 | 2026-10-12 16:19 | All review findings fixed and committed, each with a test where possible |
+| 2026-10-12 16:20 | Step 5: GitHub CI added; the Worker job's exact commands pass locally (31 tests, bundle OK) |
+| 2026-10-12 16:21 | Step 5 committed: 61 Dart tests + 31 Worker tests now run on every push and pull request |
 
 ## How to read a step log
 Every step file has the same parts:

@@ -1,0 +1,59 @@
+# Runs on every push and pull request: Flutter analyze + tests, Worker tests + bundle check.
+name: CI
+
+on:
+  push:
+    branches: [main, bilge-changes]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Flutter analyze & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install packages
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+  worker:
+    name: Worker test & bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      # Builds the Worker exactly like a deploy would, without uploading it.
+      - name: Bundle check
+        run: npx wrangler deploy --dry-run --outdir dist
