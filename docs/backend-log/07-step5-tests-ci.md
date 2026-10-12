@@ -5,7 +5,7 @@
 | **When** | 2026-10-12, 16:19 – 16:21 (Europe/Rome) |
 | **Who** | Claude, for Bilge |
 | **Commit** | `f728770` ci: run Flutter and Worker checks on every push and pull request |
-| **Verified** | ✅ Worker CI job run locally with the exact same commands: install, 31 tests, bundle check all pass · ⚠️ the Flutter job will run for the first time on GitHub after the push |
+| **Verified** | ✅ CI green on GitHub (run 38264866530): 0 analyzer errors/warnings, all 61 Dart + 31 Worker tests pass |
 
 ## In one sentence
 From now on, GitHub automatically checks every push and pull request, so a mistake is caught before it reaches `main`.
@@ -46,6 +46,11 @@ If a new push arrives while checks are still running, the old run is cancelled t
 | | `scan.test.js` | 7 | Bad uploads, key leaks |
 | | `recipes.test.js` | 12 | Unsafe or malformed AI recipes, leaked errors |
 | | `diet.test.js` | 3 | Server and app disagreeing on diets |
+
+## Update 16:45: first real results
+- **Errors and warnings fail CI; style hints don't.** `flutter analyze` failed the first run because it treats style hints as failures. CI now uses `dart analyze`, shows every issue as an annotation on the exact line, and blocks only on errors and warnings.
+- **Result: everything green.** The 7 remaining hints are all in pre-existing UI files (see the handoff page).
+- **Tests** use the GitHub reporter, so a failing test also appears as an annotation.
 
 ## Decided on purpose
 - **No format check yet.** `dart format` would fail on existing UI files that were never formatted, and reformatting Meltem's screens isn't part of backend work. It can be added later with one line, after a one-time `dart format lib test`.

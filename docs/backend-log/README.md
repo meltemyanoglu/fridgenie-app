@@ -13,16 +13,16 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | – | Analysis | ✅ Done | – | [00-analysis.md](00-analysis.md) |
 | – | Plan | ✅ Done | – | [01-plan.md](01-plan.md) |
 | 1 | Worker rewrite | ✅ Done · ⏳ not deployed | `9213696` | [02-step1-worker-rewrite.md](02-step1-worker-rewrite.md) |
-| 2 | Dart API layer | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `1bb47dc` | [03-step2-dart-api-layer.md](03-step2-dart-api-layer.md) |
-| 3 | Storage fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `9411c3b` | [04-step3-storage.md](04-step3-storage.md) |
-| 4 | Business logic fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `f8b287b` | [05-step4-business-logic.md](05-step4-business-logic.md) |
-| 4b | Independent review + fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `bfdddcf` | [06-review-fixes.md](06-review-fixes.md) |
-| 5 | Tests + CI | ✅ Done · ⚠️ Flutter job runs first on GitHub | `f728770` | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
+| 2 | Dart API layer | ✅ Done · ✅ verified on CI | `1bb47dc` | [03-step2-dart-api-layer.md](03-step2-dart-api-layer.md) |
+| 3 | Storage fixes | ✅ Done · ✅ verified on CI | `9411c3b` | [04-step3-storage.md](04-step3-storage.md) |
+| 4 | Business logic fixes | ✅ Done · ✅ verified on CI | `f8b287b` | [05-step4-business-logic.md](05-step4-business-logic.md) |
+| 4b | Independent review + fixes | ✅ Done · ✅ verified on CI | `bfdddcf` | [06-review-fixes.md](06-review-fixes.md) |
+| 5 | Tests + CI | ✅ Done · ✅ CI green | `f728770` | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
 | 6 | Cleanup + handoff | ✅ Done | `72c3553` | [08-step6-cleanup-handoff.md](08-step6-cleanup-handoff.md) |
 
 Legend: ✅ done · ⏳ waiting · ⚠️ needs a human to check
 
-**Still open (needs a person):** run `flutter analyze` + `flutter test` (or wait for CI) · deploy the Worker · merge into `main` when Bilge says so.
+**Still open (needs a person):** deploy the Worker · try the app with real AI · merge into `main` when Bilge says so.
 
 ## Timeline
 All times are Europe/Rome.
@@ -57,6 +57,9 @@ All times are Europe/Rome.
 | 2026-10-12 16:22 | Step 6: removed leftovers of the old in-app key setup, completed the project README, wrote the handoff page for Meltem |
 | 2026-10-12 16:23 | Step 6 committed. All planned steps are done; waiting for Bilge's `flutter analyze`/`flutter test` run, the Worker deploy, and her go-ahead to merge |
 | 2026-10-12 16:24 | GitHub access for Claude was granted: all 8 commits pushed to `bilge-changes` (`9811d3e..72c3553`). `main` untouched. CI starts on GitHub with this push |
+| 2026-10-12 16:26 | First CI run: Worker job ✅; Flutter job ❌ at "Analyze". The log couldn't be downloaded from Claude's sandbox, so the cause wasn't visible yet |
+| 2026-10-12 16:42 | CI changed to show every analyzer and test problem as an annotation on the exact line |
+| 2026-10-12 16:45 | CI ✅ **all green**: 0 analyzer errors/warnings, **all 61 Dart tests and 31 Worker tests pass** on real Flutter. The earlier ❌ came from `flutter analyze` failing on 7 style hints, all in pre-existing UI files (6× `unnecessary_underscores`, 1× deprecated `translate` in `swipe_deck_screen.dart`) |
 
 ## How to read a step log
 Every step file has the same parts:

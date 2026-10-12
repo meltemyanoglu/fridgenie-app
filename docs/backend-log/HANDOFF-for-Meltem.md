@@ -43,6 +43,7 @@ Every provider method your screens use kept its name (`generateWithGemini`, `gem
 - The "already saved" snackbar in `recipe_detail_screen.dart` is in Turkish (*"Bu tarif zaten kaydedilmiş!"*); the rest of the app is English.
 - **"Waste saved (kg)"** on the profile is always 0, because nothing calculates it. Open question: how should it be estimated? Until decided, consider hiding it.
 - `fridge_door_widget.dart` uses SharedPreferences directly for its own UI state. That's fine; it could use `context.read<LocalStore>()` later for consistency.
+- CI shows 7 style hints in your files: `unnecessary_underscores` in `animated_blob.dart:43`, `badges_screen.dart:72` (×2), `scan_screen.dart:293`, `surprise_screen.dart:100`, `mood_screen.dart:73` (write `_` instead of `__`), and a deprecated `translate` in `swipe_deck_screen.dart:118` (use `translateByDouble`). They don't block anything.
 - Code formatting: `dart format lib test` was never run on the project. If you run it once, we can add a format check to CI.
 
 ## Where to read more
