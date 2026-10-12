@@ -26,11 +26,22 @@ jobs:
       - name: Install packages
         run: flutter pub get
 
+      # Every issue becomes a GitHub annotation on the exact line; errors and
+      # warnings fail the job, style infos are shown but don't block.
       - name: Analyze
-        run: flutter analyze
+        run: |
+          set +e
+          dart analyze --format=machine > analyze.txt 2>&1
+          status=$?
+          awk -F'|' 'NF >= 8 {
+            level = ($1 == "ERROR") ? "error" : ($1 == "WARNING") ? "warning" : "notice"
+            printf "::%s file=%s,line=%s,col=%s::%s (%s)\n", level, $4, $5, $6, $8, tolower($3)
+          }' analyze.txt | sed "s#file=$PWD/#file=#"
+          echo "Analyzer exit code: $status"
+          exit $status
 
       - name: Test
-        run: flutter test
+        run: flutter test --reporter=github
 
   worker:
     name: Worker test & bundle
