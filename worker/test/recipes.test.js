@@ -61,6 +61,12 @@ describe("POST /v1/recipes", () => {
     expect(recipes.map((r) => r.title)).toEqual(["Veg"]);
   });
 
+  it("accepts recipes whose tags imply the requested rule (vegan => vegetarian)", async () => {
+    stubGemini(geminiReply({ recipes: [validRecipe({ dietary: ["vegan"] })] }));
+    const res = await post("/v1/recipes", { ...baseRequest, dietary: ["vegetarian", "dairyFree"] });
+    expect(res.status).toBe(200);
+  });
+
   it("fails cleanly when no recipe is safe for the user", async () => {
     stubGemini(geminiReply({ recipes: [validRecipe({ dietary: [] })] }));
     const res = await post("/v1/recipes", baseRequest);

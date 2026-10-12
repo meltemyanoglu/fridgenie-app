@@ -33,4 +33,6 @@ class StorageKeys {
   static const recipesCooked = 'fridgenie.recipes_cooked';
   static const currentStreak = 'fridgenie.current_streak';
   static const longestStreak = 'fridgenie.longest_streak';
+  static const lastCookedOn = 'fridgenie.last_cooked_on';
+  static const cookingStats = 'fridgenie.cooking_stats';
 }

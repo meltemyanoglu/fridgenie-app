@@ -9,7 +9,6 @@ import '../../data/services/ai_service.dart';
 import '../../providers/fridge_provider.dart';
 import '../../providers/grocery_provider.dart';
 import '../../providers/recipe_provider.dart';
-import '../../providers/user_provider.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/section_header.dart';
@@ -23,7 +22,6 @@ class RecipeDetailScreen extends StatefulWidget {
 }
 
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
-  final _ai = AIService();
   List<GrocerySuggestion> _groceries = [];
 
   @override
@@ -34,7 +32,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   Future<void> _loadGroceries() async {
     final fridge = context.read<FridgeProvider>();
-    final list = await _ai.suggestGroceries(
+    final list = await context.read<AIService>().suggestGroceries(
       recipe: widget.ranked.recipe,
       ingredientIds: fridge.inventoryIds,
     );
@@ -43,7 +41,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   void _markCooked() {
-    context.read<UserProvider>().recordCookedRecipe();
+    context.read<RecipeProvider>().markCooked(widget.ranked.recipe);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Cooked! Streak +1 🔥'),

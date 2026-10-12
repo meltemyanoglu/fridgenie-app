@@ -1,6 +1,7 @@
 // POST /v1/recipes: generates 1..4 recipes from the user's ingredients and preferences.
 
 import { LIMITS } from "../config.js";
+import { satisfiesDiet } from "../diet.js";
 import { generateJson } from "../gemini.js";
 import { ApiError, ErrorCode } from "../http.js";
 import { buildRecipePrompt } from "../prompts.js";
@@ -30,9 +31,8 @@ export async function handleRecipes({ request, env, logger }) {
     maxOutputTokens: TOKENS_PER_RECIPE * recipeRequest.count + TOKEN_HEADROOM,
   });
 
-  const required = recipeRequest.dietary.filter((d) => d !== "noRestrictions");
   const all = sanitizeRecipes(raw);
-  const recipes = all.filter((recipe) => required.every((d) => recipe.dietary.includes(d)));
+  const recipes = all.filter((recipe) => satisfiesDiet(recipe.dietary, recipeRequest.dietary));
 
   if (recipes.length < all.length) {
     logger.warn("Dropped recipes violating dietary rules.", { dropped: all.length - recipes.length });

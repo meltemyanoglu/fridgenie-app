@@ -140,6 +140,23 @@ class Recipe {
         RecipeCategory.useItUp => const [Color(0xFFE5854A), Color(0xFFFF6B6B)],
       };
 
+  /// True when the recipe meets **every** restriction in [prefs].
+  bool satisfiesDiet(Iterable<DietaryPreference> prefs) => prefs.every(
+      (pref) => pref == DietaryPreference.noRestrictions || _fits(pref));
+
+  /// Vegan implies vegetarian and dairy-free; vegetarian implies pescatarian.
+  bool _fits(DietaryPreference pref) {
+    if (dietaryFits.contains(pref)) return true;
+    final vegan = dietaryFits.contains(DietaryPreference.vegan);
+    final vegetarian =
+        vegan || dietaryFits.contains(DietaryPreference.vegetarian);
+    return switch (pref) {
+      DietaryPreference.vegetarian || DietaryPreference.dairyFree => vegan,
+      DietaryPreference.pescatarian => vegetarian,
+      _ => false,
+    };
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,

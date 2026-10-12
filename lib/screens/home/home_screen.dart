@@ -35,7 +35,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _ai = AIService();
   bool _showAllIngredients = false;
 
   @override
@@ -146,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final fridge = context.watch<FridgeProvider>();
     final recipes = context.watch<RecipeProvider>();
     final user = context.watch<UserProvider>();
-    final tip = _ai.tipOfTheDay();
+    final tip = context.watch<AIService>().tipOfTheDay();
 
     final categoryTabs = RecipeCategory.values
         .map(

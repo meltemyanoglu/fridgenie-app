@@ -4,7 +4,7 @@
 |---|---|
 | **When** | 2026-10-12, 15:13 – 15:19 (Europe/Rome) |
 | **Who** | Claude, for Bilge |
-| **Commit** | see the status table in [README](README.md) |
+| **Commit** | `9411c3b` feat(app): reliable on-device storage with migrations |
 | **Verified** | ✅ mock recipe data checked for round-trip edge cases (61 recipes, none found) · ⚠️ Dart code **not compiled yet**: run `flutter analyze` and `flutter test` |
 
 ## In one sentence

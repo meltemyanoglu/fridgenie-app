@@ -12,9 +12,9 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | – | Plan | ✅ Done | – | [01-plan.md](01-plan.md) |
 | 1 | Worker rewrite | ✅ Done · ⏳ not deployed | `9213696` | [02-step1-worker-rewrite.md](02-step1-worker-rewrite.md) |
 | 2 | Dart API layer | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `1bb47dc` | [03-step2-dart-api-layer.md](03-step2-dart-api-layer.md) |
-| 3 | Storage fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | (next commit fills this in) | [04-step3-storage.md](04-step3-storage.md) |
-| 4 | Business logic fixes | ⏳ Next | | |
-| 5 | Tests + CI | ⏳ | | |
+| 3 | Storage fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | `9411c3b` | [04-step3-storage.md](04-step3-storage.md) |
+| 4 | Business logic fixes | ✅ Done · ⚠️ needs `flutter analyze`/`test` | (next commit fills this in) | [05-step4-business-logic.md](05-step4-business-logic.md) |
+| 5 | Tests + CI | ⏳ Next | | |
 | 6 | Cleanup + handoff | ⏳ | | |
 
 Legend: ✅ done · ⏳ waiting · ⚠️ needs a human to check
@@ -40,6 +40,10 @@ All times are Europe/Rome.
 | 2026-10-12 15:15 | Found that the home screen lets users pick ingredients not in their fridge, so selections must not be tied to the fridge (they were being dropped on restart) |
 | 2026-10-12 15:17 | Checked all 61 mock recipes for data that could break saving/loading: none found |
 | 2026-10-12 15:19 | Step 3 committed: instant loading, full-recipe favorites, tolerant parsing, data migration v1 → v2 |
+| 2026-10-12 15:20 | Step 4 started. Found the Worker would also reject a vegan recipe for a vegetarian user; fixed with one shared dietary rule (Worker: 31 tests pass) |
+| 2026-10-12 15:22 | Day-based streaks and real badges written, with a test clock to simulate different days |
+| 2026-10-12 15:24 | Checked the real mock recipes support the new diet tests (6 vegan + gluten-free matches) |
+| 2026-10-12 15:26 | Step 4 committed: safe dietary filter, real streaks and badges, no stuck spinners |
 
 ## How to read a step log
 Every step file has the same parts:

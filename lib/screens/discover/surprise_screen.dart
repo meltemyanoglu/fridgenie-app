@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
+import '../../providers/fridge_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../routes.dart';
 import '../../widgets/animated_blob.dart';
@@ -42,7 +43,9 @@ class _SurpriseScreenState extends State<SurpriseScreen>
   Future<void> _roll() async {
     setState(() => _rolling = true);
     _spin.repeat();
-    await context.read<RecipeProvider>().rollSurprise();
+    await context.read<RecipeProvider>().rollSurprise(
+      ingredientIds: context.read<FridgeProvider>().inventoryIds,
+    );
     if (!mounted) return;
     _spin.stop();
     setState(() => _rolling = false);

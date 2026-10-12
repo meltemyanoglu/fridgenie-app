@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+
 import '../mock/mock_ingredients.dart';
 import '../mock/mock_recipes.dart';
 import '../mock/mock_tips.dart';
@@ -23,10 +25,20 @@ class GrocerySuggestion {
 /// Real AI calls live in FridgenieApi.
 /// Methods add a short delay so the UI can show its loading states.
 class AIService {
-  final Random _rng;
-  AIService({Random? rng}) : _rng = rng ?? Random();
+  AIService({
+    Random? rng,
+    Duration thinkDelay = const Duration(milliseconds: 700),
+  })  : _rng = rng ?? Random(),
+        _thinkDelay = thinkDelay;
 
-  Duration get _thinkDelay => const Duration(milliseconds: 700);
+  final Random _rng;
+
+  /// Fake "thinking" time so loading states are visible; zero in tests.
+  final Duration _thinkDelay;
+
+  /// Mock recipes the user is allowed to eat, by every dietary restriction.
+  List<Recipe> _allowedFor(UserProfile profile) =>
+      MockRecipes.all.where((r) => r.satisfiesDiet(profile.dietary)).toList();
 
   /// Suggest recipes based on what's in the fridge + user profile.
   Future<List<RankedRecipe>> suggestRecipes({
@@ -39,21 +51,9 @@ class AIService {
 
     final scored = <RankedRecipe>[];
 
-    for (final recipe in MockRecipes.all) {
-      // Filter by category if requested
+    for (final recipe in _allowedFor(profile)) {
       if (category != null && recipe.category != category) continue;
-
-      // Filter by mood if requested
       if (mood != null && !recipe.matchingMoods.contains(mood)) continue;
-
-      // Dietary fit must overlap with user prefs (or no prefs)
-      if (!profile.dietary.contains(DietaryPreference.noRestrictions) &&
-          profile.dietary.isNotEmpty &&
-          !recipe.dietaryFits.any(profile.dietary.contains)) {
-        // Allow when user has prefs but recipe matches some — already checked.
-        // If absolutely no overlap, skip.
-        continue;
-      }
 
       final required = recipe.requiredIngredientIds;
       final have = required.where(ingredientIds.contains).toList();
@@ -87,28 +87,38 @@ class AIService {
     return scored;
   }
 
-  /// "Surprise Me Chef" — random recipe with a flair.
-  Future<RankedRecipe> surpriseMe({required UserProfile profile}) async {
+  /// "Surprise Me Chef": a random recipe the user's diet allows.
+  Future<RankedRecipe> surpriseMe({
+    required UserProfile profile,
+    Set<String> ingredientIds = const {},
+  }) async {
     await Future.delayed(_thinkDelay);
-    final pool = MockRecipes.all;
+    var pool = _allowedFor(profile);
+    if (pool.isEmpty) {
+      debugPrint('[AIService] no mock recipe fits ${profile.dietary}; '
+          'surprising from the full catalog');
+      pool = MockRecipes.all;
+    }
     final recipe = pool[_rng.nextInt(pool.length)];
-    return RankedRecipe(
-      recipe: recipe,
-      matchScore: 1.0,
-      haveIngredients: recipe.requiredIngredientIds,
-      missingIngredients: const [],
-      aiReason: 'Genie rolled the dice and picked something ${recipe.matchingMoods.first.label.toLowerCase()}.',
+    final mood = recipe.matchingMoods.firstOrNull?.label.toLowerCase();
+    return RankedRecipe.fromCoverage(
+      recipe,
+      ingredientIds,
+      reason: mood == null
+          ? 'Genie rolled the dice for you.'
+          : 'Genie rolled the dice and picked something $mood.',
     );
   }
 
-  /// Best offline recipe for [mode], used when the AI backend is missing or fails.
+  /// Best offline recipe for [mode]; used when the AI is missing or fails.
   Future<Recipe> fallbackRecipe({
     required Set<String> ingredientIds,
     required UserProfile profile,
     required GenieMode mode,
   }) async {
     if (mode == GenieMode.surpriseMe || ingredientIds.isEmpty) {
-      return (await surpriseMe(profile: profile)).recipe;
+      return (await surpriseMe(profile: profile, ingredientIds: ingredientIds))
+          .recipe;
     }
 
     final ranked = mode == GenieMode.leftoversRescue
@@ -127,10 +137,13 @@ class AIService {
   }
 
   /// Fridge Challenge: suggest a recipe that uses ONLY the chosen 3 ingredients.
-  Future<List<RankedRecipe>> challenge3Ingredients(List<String> ids) async {
+  Future<List<RankedRecipe>> challenge3Ingredients(
+    List<String> ids, {
+    required UserProfile profile,
+  }) async {
     await Future.delayed(_thinkDelay);
     final results = <RankedRecipe>[];
-    for (final r in MockRecipes.all) {
+    for (final r in _allowedFor(profile)) {
       final overlap = r.requiredIngredientIds.where(ids.contains).length;
       if (r.requiredIngredientIds.length <= 4 && overlap >= 2) {
         results.add(RankedRecipe(
@@ -171,8 +184,7 @@ class AIService {
       ..sort((a, b) => b.matchScore.compareTo(a.matchScore));
   }
 
-  // Photo scanning has moved to `IngredientRecognizer` (mock + real OpenAI
-  // Vision implementations) — see `lib/data/services/ingredient_recognizer.dart`.
+  // Photo scanning lives in `IngredientRecognizer` (ingredient_recognizer.dart).
 
   /// Suggest grocery items to complete a recipe + reason.
   Future<List<GrocerySuggestion>> suggestGroceries({

@@ -45,11 +45,19 @@ class RecipeProvider extends ChangeNotifier {
   /// True when real AI (Gemini via the Worker) is available.
   bool get geminiAvailable => _api != null;
 
-  // ── Suggestions (mock AI) ───────────────────────────────────────────────
+  static const _genericError = 'Something went wrong. Please try again.';
+
+  void _logFailure(String action, Object error, StackTrace stack) =>
+      debugPrint('$_tag $action failed: $error\n$stack');
+
+  // ── Suggestions (offline ranking) ───────────────────────────────────────
   List<RankedRecipe> _suggestions = [];
   RecipeCategory? _activeCategory;
   RequestState _suggestionsState = RequestState.idle;
   String? _suggestionsError;
+
+  /// Bumped per request so a slow, older answer can't overwrite a newer one.
+  int _suggestionsRequest = 0;
 
   List<RankedRecipe> get suggestions => _suggestions;
   RecipeCategory? get activeCategory => _activeCategory;
@@ -62,24 +70,30 @@ class RecipeProvider extends ChangeNotifier {
   }
 
   Future<void> generateSuggestions(Set<String> ingredientIds) async {
+    final request = ++_suggestionsRequest;
     _suggestionsState = RequestState.loading;
     _suggestionsError = null;
     notifyListeners();
+
     try {
-      _suggestions = await _ai.suggestRecipes(
+      final results = await _ai.suggestRecipes(
         ingredientIds: ingredientIds,
         profile: _userProvider.profile,
         category: _activeCategory,
       );
+      if (request != _suggestionsRequest) return;
+      _suggestions = results;
       _suggestionsState = RequestState.success;
-    } catch (e) {
+    } catch (e, stack) {
+      if (request != _suggestionsRequest) return;
+      _logFailure('generateSuggestions', e, stack);
       _suggestionsState = RequestState.error;
-      _suggestionsError = e.toString();
+      _suggestionsError = _genericError;
     }
     notifyListeners();
   }
 
-  // ── Gemini recipe generation ────────────────────────────────────────────
+  // ── AI recipe generation (Gemini via the Worker) ────────────────────────
   RequestState _geminiState = RequestState.idle;
   String? _geminiError;
   bool _lastGenerationUsedGemini = false;
@@ -103,20 +117,20 @@ class RecipeProvider extends ChangeNotifier {
           await _generate(ingredientIds: ingredientIds, mode: mode);
       _lastGenerationUsedGemini = generation.fromAi;
       _geminiError = generation.fallbackReason;
-      if (generation.fromAi) addGeneratedRecipe(generation.recipe);
       _geminiState = RequestState.success;
       notifyListeners();
       return RankedRecipe.fromCoverage(generation.recipe, ingredientIds);
     } catch (e, stack) {
-      debugPrint('$_tag generateWithGemini failed: $e\n$stack');
+      _logFailure('generateWithGemini', e, stack);
       _geminiState = RequestState.error;
-      _geminiError = 'Something went wrong. Try again in a moment.';
+      _geminiError = _genericError;
       notifyListeners();
       return null;
     }
   }
 
   /// Asks the AI for one recipe, or returns an offline recipe with a reason.
+  /// Real AI recipes are saved and counted for the AI Pioneer badge.
   Future<_Generation> _generate({
     required List<String> ingredientIds,
     required GenieMode mode,
@@ -143,8 +157,11 @@ class RecipeProvider extends ChangeNotifier {
         skill: profile.skill,
         avoidTitles: _generatedRecipes.map((r) => r.title).take(10).toList(),
       ));
-      debugPrint('$_tag AI recipe "${recipes.first.title}" ($mode)');
-      return _Generation.ai(recipes.first);
+      final recipe = recipes.first;
+      debugPrint('$_tag AI recipe "${recipe.title}" ($mode)');
+      addGeneratedRecipe(recipe);
+      _userProvider.recordAiRecipeGenerated();
+      return _Generation.ai(recipe);
     } on FridgenieApiException catch (e) {
       debugPrint('$_tag AI failed, using offline recipe: $e');
       return _Generation.fallback(
@@ -168,63 +185,124 @@ class RecipeProvider extends ChangeNotifier {
   // ── Mood-based ──────────────────────────────────────────────────────────
   List<RankedRecipe> _moodSuggestions = [];
   Mood? _activeMood;
+  RequestState _moodState = RequestState.idle;
+  int _moodRequest = 0;
+
   List<RankedRecipe> get moodSuggestions => _moodSuggestions;
   Mood? get activeMood => _activeMood;
+  RequestState get moodState => _moodState;
 
   Future<void> suggestForMood(Mood mood, Set<String> ingredientIds) async {
+    final request = ++_moodRequest;
     _activeMood = mood;
-    _suggestionsState = RequestState.loading;
+    _moodState = RequestState.loading;
     notifyListeners();
-    _moodSuggestions = await _ai.suggestRecipes(
-      ingredientIds: ingredientIds,
-      profile: _userProvider.profile,
-      mood: mood,
-    );
-    _suggestionsState = RequestState.success;
+
+    try {
+      final results = await _ai.suggestRecipes(
+        ingredientIds: ingredientIds,
+        profile: _userProvider.profile,
+        mood: mood,
+      );
+      if (request != _moodRequest) return;
+      _moodSuggestions = results;
+      _moodState = RequestState.success;
+    } catch (e, stack) {
+      if (request != _moodRequest) return;
+      _logFailure('suggestForMood', e, stack);
+      _moodState = RequestState.error;
+    }
     notifyListeners();
   }
 
   // ── Surprise Me ─────────────────────────────────────────────────────────
   RankedRecipe? _surprise;
-  RankedRecipe? get surprise => _surprise;
+  RequestState _surpriseState = RequestState.idle;
 
-  Future<void> rollSurprise() async {
-    _suggestionsState = RequestState.loading;
+  RankedRecipe? get surprise => _surprise;
+  RequestState get surpriseState => _surpriseState;
+
+  /// Rolls a surprise recipe; [ingredientIds] lets the AI use the fridge.
+  Future<void> rollSurprise({Set<String> ingredientIds = const {}}) async {
+    _surpriseState = RequestState.loading;
     notifyListeners();
 
-    if (_api != null) {
-      final generation =
-          await _generate(ingredientIds: const [], mode: GenieMode.surpriseMe);
-      if (generation.fromAi) addGeneratedRecipe(generation.recipe);
-      _surprise = RankedRecipe.fromCoverage(generation.recipe, const []);
-    } else {
-      _surprise = await _ai.surpriseMe(profile: _userProvider.profile);
+    try {
+      if (_api != null) {
+        final generation = await _generate(
+          ingredientIds: ingredientIds.toList(),
+          mode: GenieMode.surpriseMe,
+        );
+        _surprise = RankedRecipe.fromCoverage(generation.recipe, ingredientIds);
+      } else {
+        _surprise = await _ai.surpriseMe(
+          profile: _userProvider.profile,
+          ingredientIds: ingredientIds,
+        );
+      }
+      _surpriseState = RequestState.success;
+    } catch (e, stack) {
+      _logFailure('rollSurprise', e, stack);
+      _surpriseState = RequestState.error;
     }
-
-    _suggestionsState = RequestState.success;
     notifyListeners();
   }
 
   // ── Challenge ───────────────────────────────────────────────────────────
   List<RankedRecipe> _challengeResults = [];
+  RequestState _challengeState = RequestState.idle;
+
   List<RankedRecipe> get challengeResults => _challengeResults;
+  RequestState get challengeState => _challengeState;
 
   Future<void> runChallenge(List<String> ids) async {
-    _challengeResults = await _ai.challenge3Ingredients(ids);
+    _challengeState = RequestState.loading;
+    notifyListeners();
+    try {
+      _challengeResults = await _ai.challenge3Ingredients(
+        ids,
+        profile: _userProvider.profile,
+      );
+      _challengeState = RequestState.success;
+    } catch (e, stack) {
+      _logFailure('runChallenge', e, stack);
+      _challengeState = RequestState.error;
+    }
     notifyListeners();
   }
 
   // ── Leftover Rescue ─────────────────────────────────────────────────────
   List<RankedRecipe> _rescueResults = [];
+  RequestState _rescueState = RequestState.idle;
+
   List<RankedRecipe> get rescueResults => _rescueResults;
+  RequestState get rescueState => _rescueState;
 
   Future<void> runRescue(Set<String> ids) async {
-    _rescueResults = await _ai.rescueLeftovers(
-      ingredientIds: ids,
-      profile: _userProvider.profile,
-    );
+    _rescueState = RequestState.loading;
+    notifyListeners();
+    try {
+      _rescueResults = await _ai.rescueLeftovers(
+        ingredientIds: ids,
+        profile: _userProvider.profile,
+      );
+      _rescueState = RequestState.success;
+    } catch (e, stack) {
+      _logFailure('runRescue', e, stack);
+      _rescueState = RequestState.error;
+    }
     notifyListeners();
   }
+
+  // ── Cooking ─────────────────────────────────────────────────────────────
+
+  /// Marks [recipe] as cooked; Surprise and challenge recipes count for
+  /// their badges. The result tells the UI about streaks and new badges.
+  CookResult markCooked(Recipe recipe) => _userProvider.recordCookedRecipe(
+        recipe,
+        fromSurprise: _surprise?.recipe.id == recipe.id,
+        fromChallenge: _challengeResults.any((r) => r.recipe.id == recipe.id),
+      );
 
   // ── Favorites (full recipe snapshots, so they never disappear) ─────────
   /// Keyed by recipe id, in the order they were added.

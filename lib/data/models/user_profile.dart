@@ -58,11 +58,14 @@ class UserProfile {
   final String? avatarEmoji;
   final int? avatarBgColor; // stored as ARGB int
 
-  /// These values should be updated by UserProvider when the user cooks/saves meals.
+  /// Updated by UserProvider when the user cooks; streaks count calendar days.
   final int currentStreak;
   final int longestStreak;
   final int recipesCooked;
   final int wasteSavedGrams;
+
+  /// Calendar day (local, midnight) of the last cooked recipe.
+  final DateTime? lastCookedOn;
 
   const UserProfile({
     this.name = 'Chef',
@@ -80,6 +83,7 @@ class UserProfile {
     this.longestStreak = 0,
     this.recipesCooked = 0,
     this.wasteSavedGrams = 0,
+    this.lastCookedOn,
   });
 
   UserProfile copyWith({
@@ -95,6 +99,7 @@ class UserProfile {
     int? longestStreak,
     int? recipesCooked,
     int? wasteSavedGrams,
+    Object? lastCookedOn = _sentinel,
   }) {
     return UserProfile(
       name: name ?? this.name,
@@ -113,6 +118,9 @@ class UserProfile {
       longestStreak: longestStreak ?? this.longestStreak,
       recipesCooked: recipesCooked ?? this.recipesCooked,
       wasteSavedGrams: wasteSavedGrams ?? this.wasteSavedGrams,
+      lastCookedOn: lastCookedOn == _sentinel
+          ? this.lastCookedOn
+          : lastCookedOn as DateTime?,
     );
   }
 }
