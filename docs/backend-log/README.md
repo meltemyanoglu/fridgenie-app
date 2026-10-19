@@ -19,6 +19,7 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | 4b | Independent review + fixes | ✅ Done · ✅ verified on CI | `bfdddcf` | [06-review-fixes.md](06-review-fixes.md) |
 | 5 | Tests + CI | ✅ Done · ✅ CI green | `f728770` | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
 | 6 | Cleanup + handoff | ✅ Done | `72c3553` | [08-step6-cleanup-handoff.md](08-step6-cleanup-handoff.md) |
+| 7 | Daily quota + Retry-After | ✅ Done | (next commit fills this in) | [09-daily-quota.md](09-daily-quota.md) |
 
 Legend: ✅ done · ⏳ waiting · ⚠️ needs a human to check
 
@@ -60,6 +61,9 @@ All times are Europe/Rome.
 | 2026-10-12 16:26 | First CI run: Worker job ✅; Flutter job ❌ at "Analyze". The log couldn't be downloaded from Claude's sandbox, so the cause wasn't visible yet |
 | 2026-10-12 16:42 | CI changed to show every analyzer and test problem as an annotation on the exact line |
 | 2026-10-12 16:45 | CI ✅ **all green**: 0 analyzer errors/warnings, **all 61 Dart tests and 31 Worker tests pass** on real Flutter. The earlier ❌ came from `flutter analyze` failing on 7 style hints, all in pre-existing UI files (6× `unnecessary_underscores`, 1× deprecated `translate` in `swipe_deck_screen.dart`) |
+
+| 2026-10-19 09:54 | Bilge back after a week; the checks from 12 Oct are still pending, so a step-by-step checklist doc was added to the Drive folder |
+| 2026-10-19 10:05 | Daily per-device quota (optional KV), Retry-After headers, quota message in the app, Gemini token logging. Worker tests: 39 pass |
 
 ## How to read a step log
 Every step file has the same parts:

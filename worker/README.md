@@ -56,7 +56,7 @@ Every error has the same shape, and `X-Request-Id` matches `requestId` in the lo
 | 413 | `PAYLOAD_TOO_LARGE` | Body or image too big |
 | 415 | `UNSUPPORTED_MEDIA_TYPE` | Not JSON, or unsupported image type |
 | 422 | `AI_BAD_RESPONSE` | Gemini blocked the content |
-| 429 | `RATE_LIMITED` | Too many requests from this device |
+| 429 | `RATE_LIMITED` / `QUOTA_EXCEEDED` | Too many requests from this device (per minute / per day); `Retry-After` says how long to wait |
 | 502 / 503 | `AI_BAD_RESPONSE` / `AI_UNAVAILABLE` | Gemini failed, timed out or replied badly |
 | 500 | `SERVER_MISCONFIGURED` / `INTERNAL` | Missing secret or unexpected bug |
 
@@ -110,6 +110,16 @@ Without that flag the app runs in demo mode (mock scan, offline recipes) and nev
 | `SCAN_RATE_LIMITER` / `RECIPE_RATE_LIMITER` | `wrangler.toml` `[[ratelimits]]` | Requests per minute per device |
 
 The app token is extractable from the app binary, so treat it as a speed bump. The rate limits and Google AI Studio quota caps are what actually protect the key.
+
+### Daily quota (optional, recommended once you ship)
+
+The per-minute limits stop bursts; the daily quota stops one device from slowly draining the Gemini allowance all day (40 scans and 120 recipe calls per device per UTC day by default, tunable via the `DAILY_*_QUOTA` vars). It needs a small KV store:
+
+```bash
+npx wrangler kv namespace create QUOTA_KV
+```
+
+Paste the printed `id` into the commented `[[kv_namespaces]]` block in `wrangler.toml`, uncomment it, and redeploy. A capped device gets `429 QUOTA_EXCEEDED` with a `Retry-After` header pointing at the next UTC midnight. Without the KV block the Worker runs exactly as before.
 
 ## Local development
 

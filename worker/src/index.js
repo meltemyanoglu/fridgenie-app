@@ -1,7 +1,8 @@
 // Fridgenie API Worker entry point: routing, auth, rate limiting and error handling.
 
-import { API_VERSION } from "./config.js";
+import { API_VERSION, DAILY_QUOTA_DEFAULTS } from "./config.js";
 import { assertAppToken, clientKey } from "./auth.js";
+import { enforceDailyQuota } from "./quota.js";
 import { handleRecipes } from "./handlers/recipes.js";
 import { handleScan } from "./handlers/scan.js";
 import {
@@ -14,12 +15,31 @@ import {
 } from "./http.js";
 import { enforceRateLimit } from "./rateLimit.js";
 
-/** Route table; `limiter` names the env binding used to rate-limit the route. */
+/**
+ * Route table; `limiter` names the env binding used to rate-limit the route,
+ * `quota` the action whose daily per-device cap applies (see quota.js).
+ */
 const ROUTES = Object.freeze({
   [`/${API_VERSION}/health`]: { method: "GET", isPublic: true, handler: () => ({ status: "ok" }) },
-  [`/${API_VERSION}/scan`]: { method: "POST", limiter: "SCAN_RATE_LIMITER", handler: handleScan },
-  [`/${API_VERSION}/recipes`]: { method: "POST", limiter: "RECIPE_RATE_LIMITER", handler: handleRecipes },
+  [`/${API_VERSION}/scan`]: {
+    method: "POST",
+    limiter: "SCAN_RATE_LIMITER",
+    quota: "scan",
+    handler: handleScan,
+  },
+  [`/${API_VERSION}/recipes`]: {
+    method: "POST",
+    limiter: "RECIPE_RATE_LIMITER",
+    quota: "recipes",
+    handler: handleRecipes,
+  },
 });
+
+/** Daily cap for a route: env var (DAILY_SCAN_QUOTA / DAILY_RECIPES_QUOTA) or default. */
+function dailyLimitFor(env, action) {
+  const override = Number(env[`DAILY_${action.toUpperCase()}_QUOTA`]);
+  return Number.isFinite(override) ? override : DAILY_QUOTA_DEFAULTS[action];
+}
 
 export default {
   async fetch(request, env) {
@@ -42,7 +62,16 @@ export default {
 
       if (!route.isPublic) {
         assertAppToken(request, env);
-        await enforceRateLimit(env[route.limiter], clientKey(request), logger);
+        const client = clientKey(request);
+        await enforceRateLimit(env[route.limiter], client, logger);
+        await enforceDailyQuota({
+          kv: env.QUOTA_KV,
+          action: route.quota,
+          clientKey: client,
+          limit: dailyLimitFor(env, route.quota),
+          now: new Date(),
+          logger,
+        });
       }
 
       const body = await route.handler({ request, env, logger });

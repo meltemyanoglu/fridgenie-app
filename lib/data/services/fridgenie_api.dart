@@ -58,6 +58,7 @@ enum FridgenieErrorCode {
   payloadTooLarge,
   unsupportedMediaType,
   rateLimited,
+  quotaExceeded,
   aiUnavailable,
   aiBadResponse,
   serverMisconfigured,
@@ -72,6 +73,7 @@ enum FridgenieErrorCode {
         'PAYLOAD_TOO_LARGE' => payloadTooLarge,
         'UNSUPPORTED_MEDIA_TYPE' => unsupportedMediaType,
         'RATE_LIMITED' => rateLimited,
+        'QUOTA_EXCEEDED' => quotaExceeded,
         'AI_UNAVAILABLE' => aiUnavailable,
         'AI_BAD_RESPONSE' => aiBadResponse,
         'SERVER_MISCONFIGURED' => serverMisconfigured,
@@ -102,6 +104,8 @@ class FridgenieApiException implements Exception {
   String get userMessage => switch (code) {
         FridgenieErrorCode.rateLimited =>
           'Genie needs a short break. Try again in a minute.',
+        FridgenieErrorCode.quotaExceeded =>
+          'Genie reached today\'s limit. Try again tomorrow.',
         FridgenieErrorCode.network =>
           'No connection to Genie. Check your internet and try again.',
         FridgenieErrorCode.timeout =>

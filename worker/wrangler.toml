@@ -12,6 +12,17 @@ compatibility_date = "2026-10-01"
 GEMINI_MODEL = "gemini-3.5-flash-lite"
 # Comma-separated web origins allowed by CORS (native apps need none), e.g. "https://fridgenie.app".
 ALLOWED_ORIGINS = ""
+# Per-device requests per UTC day; only enforced when QUOTA_KV below is set up.
+DAILY_SCAN_QUOTA = "40"
+DAILY_RECIPES_QUOTA = "120"
+
+# Optional daily-quota storage. To turn it on:
+#   npx wrangler kv namespace create QUOTA_KV
+# then paste the printed id below, uncomment, and redeploy. Without it the
+# Worker still runs; only the per-minute limits apply.
+# [[kv_namespaces]]
+# binding = "QUOTA_KV"
+# id = "<paste the id printed by the create command>"
 
 [observability]
 enabled = true

@@ -8,6 +8,12 @@ export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta
 export const GEMINI_TIMEOUT_MS = 25_000;
 export const GEMINI_RETRY_DELAY_MS = 600;
 
+/** Default per-device requests per UTC day; override via wrangler.toml vars. */
+export const DAILY_QUOTA_DEFAULTS = Object.freeze({
+  scan: 40,
+  recipes: 120,
+});
+
 export const LIMITS = Object.freeze({
   scanBodyBytes: 8_000_000,
   recipeBodyBytes: 32_000,

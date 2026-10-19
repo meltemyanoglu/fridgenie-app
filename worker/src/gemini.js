@@ -96,6 +96,16 @@ function mapGeminiStatus(status) {
 }
 
 function extractJson(payload, logger) {
+  // Token counts make Gemini cost visible straight from `wrangler tail`.
+  const usage = payload?.usageMetadata;
+  if (usage) {
+    logger.info("Gemini usage.", {
+      promptTokens: usage.promptTokenCount,
+      outputTokens: usage.candidatesTokenCount,
+      totalTokens: usage.totalTokenCount,
+    });
+  }
+
   const blockReason = payload?.promptFeedback?.blockReason;
   const candidate = payload?.candidates?.[0];
   const finishReason = candidate?.finishReason;

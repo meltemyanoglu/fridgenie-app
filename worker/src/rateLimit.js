@@ -16,6 +16,7 @@ export async function enforceRateLimit(limiter, key, logger) {
     logger.warn("Rate limit exceeded.", { key });
     throw new ApiError(429, ErrorCode.RATE_LIMITED, "Too many requests. Please wait a minute.", {
       retryable: true,
+      retryAfterSeconds: 60,
     });
   }
 }

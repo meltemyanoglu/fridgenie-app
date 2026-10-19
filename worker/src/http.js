@@ -9,6 +9,7 @@ export const ErrorCode = Object.freeze({
   PAYLOAD_TOO_LARGE: "PAYLOAD_TOO_LARGE",
   UNSUPPORTED_MEDIA_TYPE: "UNSUPPORTED_MEDIA_TYPE",
   RATE_LIMITED: "RATE_LIMITED",
+  QUOTA_EXCEEDED: "QUOTA_EXCEEDED",
   AI_UNAVAILABLE: "AI_UNAVAILABLE",
   AI_BAD_RESPONSE: "AI_BAD_RESPONSE",
   SERVER_MISCONFIGURED: "SERVER_MISCONFIGURED",
@@ -21,7 +22,7 @@ export class ApiError extends Error {
    * @param {number} status HTTP status code.
    * @param {string} code One of {@link ErrorCode}.
    * @param {string} message Client-safe message.
-   * @param {{retryable?: boolean, logDetail?: unknown}} [options]
+   * @param {{retryable?: boolean, logDetail?: unknown, retryAfterSeconds?: number}} [options]
    */
   constructor(status, code, message, options = {}) {
     super(message);
@@ -30,6 +31,7 @@ export class ApiError extends Error {
     this.code = code;
     this.retryable = options.retryable ?? false;
     this.logDetail = options.logDetail;
+    this.retryAfterSeconds = options.retryAfterSeconds;
   }
 }
 
@@ -54,8 +56,12 @@ export function corsHeaders(request, env) {
 }
 
 /** Serializes a JSON body with the request id and CORS headers attached. */
-export function jsonResponse(body, { status = 200, requestId, cors = {} } = {}) {
-  const headers = { "Content-Type": "application/json; charset=utf-8", ...cors };
+export function jsonResponse(body, { status = 200, requestId, cors = {}, extraHeaders = {} } = {}) {
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    ...cors,
+    ...extraHeaders,
+  };
   if (requestId) headers["X-Request-Id"] = requestId;
   return new Response(JSON.stringify(body), { status, headers });
 }
@@ -67,6 +73,12 @@ export function errorResponse(error, { requestId, cors }) {
       ? error
       : new ApiError(500, ErrorCode.INTERNAL, "Unexpected server error.");
 
+  const extraHeaders = {};
+  if (Number.isFinite(apiError.retryAfterSeconds)) {
+    // Standard header, so well-behaved clients know how long to back off.
+    extraHeaders["Retry-After"] = String(Math.max(1, Math.round(apiError.retryAfterSeconds)));
+  }
+
   return jsonResponse(
     {
       error: {
@@ -76,7 +88,7 @@ export function errorResponse(error, { requestId, cors }) {
       },
       requestId,
     },
-    { status: apiError.status, requestId, cors },
+    { status: apiError.status, requestId, cors, extraHeaders },
   );
 }
 

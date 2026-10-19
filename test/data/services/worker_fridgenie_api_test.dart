@@ -109,6 +109,21 @@ void main() {
     expect(error.userMessage, contains('Try again in a minute'));
   });
 
+  test('maps QUOTA_EXCEEDED to its own daily-limit message', () async {
+    final api = apiWith((_) async => json({
+          'error': {
+            'code': 'QUOTA_EXCEEDED',
+            'message': 'Daily limit reached.',
+            'retryable': true,
+          },
+        }, 429));
+
+    final error = await failureOf(api.scanIngredients(pngBytes));
+
+    expect(error.code, FridgenieErrorCode.quotaExceeded);
+    expect(error.userMessage, contains('tomorrow'));
+  });
+
   test('falls back to HTTP status when the body is not our JSON', () async {
     final api = apiWith((_) async => http.Response('<html>oops</html>', 502));
     final error = await failureOf(api.scanIngredients(pngBytes));
