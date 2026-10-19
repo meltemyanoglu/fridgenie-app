@@ -4,8 +4,8 @@
 |---|---|
 | **When** | 2026-10-19, 09:56 – 10:05 (Europe/Rome) |
 | **Who** | Claude, for Bilge |
-| **Commit** | see the status table in [README](README.md) |
-| **Verified** | ✅ 39 Worker tests pass (8 new) · ✅ deploy dry-run bundles cleanly · ⚠️ Dart change checked by CI on push |
+| **Commit** | `7ff825b` feat(worker): daily per-device quota, Retry-After headers, token logging |
+| **Verified** | ✅ 39 Worker tests pass (8 new) · ✅ deploy dry-run bundles cleanly · ✅ CI green on GitHub (run 39219707588): 62 Dart + 39 Worker tests |
 
 ## In one sentence
 One phone can no longer drain the whole Gemini allowance over a day, and every "slow down" answer now says exactly how long to wait.

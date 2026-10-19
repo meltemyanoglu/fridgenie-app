@@ -19,7 +19,7 @@ This folder records every backend change made on the **`bilge-changes`** branch:
 | 4b | Independent review + fixes | ✅ Done · ✅ verified on CI | `bfdddcf` | [06-review-fixes.md](06-review-fixes.md) |
 | 5 | Tests + CI | ✅ Done · ✅ CI green | `f728770` | [07-step5-tests-ci.md](07-step5-tests-ci.md) |
 | 6 | Cleanup + handoff | ✅ Done | `72c3553` | [08-step6-cleanup-handoff.md](08-step6-cleanup-handoff.md) |
-| 7 | Daily quota + Retry-After | ✅ Done | (next commit fills this in) | [09-daily-quota.md](09-daily-quota.md) |
+| 7 | Daily quota + Retry-After | ✅ Done | `7ff825b` | [09-daily-quota.md](09-daily-quota.md) |
 
 Legend: ✅ done · ⏳ waiting · ⚠️ needs a human to check
 
