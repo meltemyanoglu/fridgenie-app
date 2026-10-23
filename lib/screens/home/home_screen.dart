@@ -22,7 +22,6 @@ import '../../widgets/ingredient_chip.dart';
 import '../../widgets/interactive_basket.dart';
 import '../../widgets/mode_card.dart';
 import '../../widgets/pill_tab_bar.dart';
-import '../../widgets/primary_button.dart';
 import '../../widgets/recipe_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/streak_ring.dart';
@@ -54,52 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _regenerate() async {
     final fridge = context.read<FridgeProvider>();
     await context.read<RecipeProvider>().generateSuggestions(fridge.selectedIds);
-  }
-
-  /// Generate a new recipe with Gemini (falls back to mock when no key set).
-  Future<void> _generateNewRecipe() async {
-    final fridge = context.read<FridgeProvider>();
-    final recipes = context.read<RecipeProvider>();
-
-    if (fridge.selectedIds.isEmpty) {
-      _showError('Add at least one ingredient first!');
-      return;
-    }
-
-    // Non-dismissible loading sheet while Genie cooks.
-    showModalBottomSheet<void>(
-      context: context,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _GeneratingSheet(),
-    );
-
-    final ranked = await recipes.generateWithGemini(
-      ingredientIds: fridge.selectedIds.toList(),
-      mode: GenieMode.standard,
-    );
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop(); // close loading sheet
-
-    if (ranked == null) {
-      // generateWithGemini already sets the error on the provider.
-      _showError(
-        recipes.geminiError ?? 'Something went wrong. Please try again.',
-      );
-      return;
-    }
-
-    // Show a friendly non-scary message if we fell back to demo mode.
-    if (!recipes.lastGenerationUsedGemini && recipes.geminiError != null) {
-      _showInfo(recipes.geminiError!);
-    }
-
-    Navigator.of(context).pushNamed(
-      AppRoutes.recipeDetail,
-      arguments: ranked,
-    );
   }
 
   void _showError(String message) {
@@ -237,19 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                   onToggleShowAll: () =>
                       setState(() => _showAllIngredients = !_showAllIngredients),
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                _SmartGenerateButton(
-                  geminiAvailable: recipes.geminiAvailable,
-                  loading: recipes.geminiAvailable
-                      ? recipes.geminiState == RequestState.loading
-                      : recipes.suggestionsState == RequestState.loading,
-                  disabled: fridge.selectedIds.isEmpty,
-                  onPressed: recipes.geminiAvailable
-                      ? _generateNewRecipe
-                      : _regenerate,
                 ),
 
                 const SizedBox(height: AppSpacing.lg),
@@ -693,16 +633,22 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasSelection = selectedCount > 0;
+    final status = hasSelection
+        ? '$selectedCount ${selectedCount == 1 ? 'ingredient' : 'ingredients'} selected'
+        : 'No ingredients selected';
+
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: AppColors.heroGradient,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.outline),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.09),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: AppColors.textPrimary.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -712,49 +658,85 @@ class _HeroCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
-                alignment: Alignment.center,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  color: AppColors.primarySurface,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                 ),
-                child: const Text('🧊', style: TextStyle(fontSize: 21)),
+                child: const Icon(
+                  Icons.kitchen_outlined,
+                  size: 22,
+                  color: AppColors.primaryDark,
+                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'What\'s in your fridge today?',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        height: 1.08,
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'What\'s in your fridge?',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                        letterSpacing: -0.2,
+                        color: AppColors.textPrimary,
                       ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Pick ingredients to get matching recipes',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        height: 1.3,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            selectedCount == 0
-                ? 'Tap a few ingredients below — I\'ll dream up dinners that match.'
-                : 'I see $selectedCount ingredients — pulling matches now.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
-              Flexible(
-                child: _MiniAction(
-                  icon: Icons.kitchen_rounded,
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: hasSelection ? AppColors.primary : AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                status,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _HeroAction(
+                  icon: Icons.inventory_2_outlined,
                   label: 'Open pantry',
                   onTap: onTapPantry,
                 ),
               ),
               const SizedBox(width: 10),
-              Flexible(
-                child: _MiniAction(
-                  icon: Icons.center_focus_strong_rounded,
+              Expanded(
+                child: _HeroAction(
+                  icon: Icons.document_scanner_outlined,
                   label: 'Scan fridge',
+                  filled: true,
                   onTap: () => Navigator.of(context).pushNamed(AppRoutes.scan),
                 ),
               ),
@@ -766,42 +748,55 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-class _MiniAction extends StatelessWidget {
+class _HeroAction extends StatelessWidget {
   final IconData icon;
   final String label;
+  final bool filled;
   final VoidCallback? onTap;
 
-  const _MiniAction({required this.icon, required this.label, this.onTap});
+  const _HeroAction({
+    required this.icon,
+    required this.label,
+    this.filled = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 17, color: AppColors.primaryDark),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  color: AppColors.primaryDark,
+    final fg = filled ? AppColors.textOnPrimary : AppColors.textPrimary;
+
+    return Material(
+      color: filled ? AppColors.primaryDark : AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        side: filled
+            ? BorderSide.none
+            : const BorderSide(color: AppColors.outline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: fg),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -965,119 +960,6 @@ class _IngredientGrid extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-/// Single smart CTA — uses Gemini when available, mock refresh otherwise.
-class _SmartGenerateButton extends StatelessWidget {
-  final bool geminiAvailable;
-  final bool loading;
-  final bool disabled;
-  final VoidCallback onPressed;
-
-  const _SmartGenerateButton({
-    required this.geminiAvailable,
-    required this.loading,
-    required this.disabled,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    String label;
-    if (loading) {
-      label = geminiAvailable ? 'Genie is cooking…' : 'Finding ideas…';
-    } else {
-      label = geminiAvailable ? 'Cook with AI 🧞' : 'Generate meal ideas';
-    }
-
-    return geminiAvailable
-        ? _GradientButton(
-            label: label,
-            loading: loading,
-            disabled: disabled,
-            onPressed: onPressed,
-          )
-        : PrimaryButton(
-            label: label,
-            icon: Icons.auto_awesome_rounded,
-            loading: loading,
-            onPressed: disabled ? null : onPressed,
-          );
-  }
-}
-
-class _GradientButton extends StatelessWidget {
-  final String label;
-  final bool loading;
-  final bool disabled;
-  final VoidCallback onPressed;
-
-  const _GradientButton({
-    required this.label,
-    required this.loading,
-    required this.disabled,
-    required this.onPressed,
-  });
-
-  static const _gradient = LinearGradient(
-    colors: [Color(0xFF3DA35D), Color(0xFF2D8A4E)],
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: disabled ? 0.45 : 1.0,
-      child: GestureDetector(
-        onTap: (disabled || loading) ? null : onPressed,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            gradient: _gradient,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: disabled
-                ? null
-                : [
-                    BoxShadow(
-                      color: const Color(0xFF3DA35D).withValues(alpha: 0.35),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (loading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              else
-                const Icon(Icons.auto_awesome_rounded,
-                    color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
